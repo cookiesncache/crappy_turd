@@ -1,3 +1,4 @@
+import 'package:crappy_turd/render/game_painter.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,25 +19,17 @@ class CrappyTurdApp extends StatelessWidget {
   }
 }
 
-/// Hosts the game. For now it shows a placeholder; the real
-/// CustomPainter-driven game world arrives in milestone M1.
+/// Hosts the game. For M1 it statically paints the world (sky, ground, turd);
+/// the game loop and tap-to-flap interaction arrive in M2.
 class GameScreen extends StatelessWidget {
   const GameScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFF9BD7F0),
-      body: Center(
-        child: Text(
-          'Crappy Turd\nscaffold ready',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      body: CustomPaint(
+        size: Size.infinite,
+        painter: GamePainter(),
       ),
     );
   }
