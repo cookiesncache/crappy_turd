@@ -1,0 +1,8 @@
+# Static analysis configuration for crappy_turd.
+# very_good_analysis is a strict, opinionated superset of flutter_lints.
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    # Doc comments on every public member are for published packages, not apps.
+    public_member_api_docs: false
