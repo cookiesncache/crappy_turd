@@ -1,13 +1,17 @@
 import 'dart:math' as math;
 
+import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/turd_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
-/// Paints the whole game world. For milestone M1 this is a static scene:
-/// a bright sky with a rainbow, a grassy ground, and the turd mascot on it.
+/// Paints the whole game world each frame: a bright sky with a rainbow, a
+/// grassy ground, and the turd at its current height and tilt.
 class GamePainter extends CustomPainter {
-  const GamePainter();
+  const GamePainter({required this.turd});
+
+  final Turd turd;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -48,7 +52,7 @@ class GamePainter extends CustomPainter {
   }
 
   void _paintGround(Canvas canvas, Size size) {
-    final groundTop = size.height * 0.82;
+    final groundTop = size.height * GameConstants.groundY;
     canvas
       ..drawRect(
         Rect.fromLTRB(0, groundTop, size.width, size.height),
@@ -61,29 +65,19 @@ class GamePainter extends CustomPainter {
   }
 
   void _paintTurd(Canvas canvas, Size size) {
-    final turdSize = size.height * 0.22;
-    final groundTop = size.height * 0.82;
-    final center = Offset(size.width / 2, groundTop - turdSize * 0.5);
-
-    final shadow = Paint()
-      ..color = Palette.shadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-
+    final turdSize = size.height * GameConstants.turdSize;
+    final center = Offset(
+      size.width * GameConstants.turdX,
+      turd.y * size.height,
+    );
     canvas
-      ..drawOval(
-        Rect.fromCenter(
-          center: Offset(center.dx, groundTop + turdSize * 0.02),
-          width: turdSize * 0.9,
-          height: turdSize * 0.18,
-        ),
-        shadow,
-      )
       ..save()
-      ..translate(center.dx, center.dy);
+      ..translate(center.dx, center.dy)
+      ..rotate(turd.tilt);
     paintTurd(canvas, turdSize);
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant GamePainter oldDelegate) => false;
+  bool shouldRepaint(covariant GamePainter oldDelegate) => true;
 }
