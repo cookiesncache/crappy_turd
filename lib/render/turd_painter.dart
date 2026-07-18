@@ -3,6 +3,41 @@ import 'dart:math' as math;
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
+/// The four stacked "scoops" (bottom -> swirl tip) that make up the turd's
+/// silhouette, expressed relative to [size] and centred on the local origin
+/// (0, 0).
+///
+/// Shared by [turdBodyPath] (for the union silhouette) and [paintTurd]
+/// (which also needs the individual rects to draw crease arcs), so the two
+/// can never disagree about the underlying geometry.
+List<Rect> _turdScoops(double size) {
+  final s = size;
+  Rect scoop(double cy, double w, double h) =>
+      Rect.fromCenter(center: Offset(0, s * cy), width: s * w, height: s * h);
+  return <Rect>[
+    scoop(0.30, 0.96, 0.44),
+    scoop(0.04, 0.74, 0.40),
+    scoop(-0.20, 0.52, 0.34),
+    scoop(-0.40, 0.30, 0.26),
+  ];
+}
+
+/// The turd's exact painted silhouette: a boolean union of its four stacked
+/// scoops (see [_turdScoops]), in LOCAL space centred on the origin (0, 0)
+/// and sized by [size].
+///
+/// This is the same path [paintTurd] fills/outlines, and it's also used
+/// directly for real-geometry collision detection (see
+/// `lib/game/collision.dart`) — sharing it means rendering and collision
+/// are structurally unable to drift apart.
+Path turdBodyPath(double size) {
+  var body = Path();
+  for (final r in _turdScoops(size)) {
+    body = Path.combine(PathOperation.union, body, Path()..addOval(r));
+  }
+  return body;
+}
+
 /// Paints the cute, glossy turd mascot centred on the canvas origin (0, 0),
 /// sized so its overall height is roughly [size].
 ///
@@ -11,21 +46,8 @@ import 'package:flutter/material.dart';
 void paintTurd(Canvas canvas, double size) {
   final s = size;
 
-  // Four stacked "scoops" (bottom -> swirl tip), expressed relative to [s].
-  Rect scoop(double cy, double w, double h) =>
-      Rect.fromCenter(center: Offset(0, s * cy), width: s * w, height: s * h);
-  final scoops = <Rect>[
-    scoop(0.30, 0.96, 0.44),
-    scoop(0.04, 0.74, 0.40),
-    scoop(-0.20, 0.52, 0.34),
-    scoop(-0.40, 0.30, 0.26),
-  ];
-
-  // Merge the scoops into one clean silhouette via boolean union.
-  var body = Path();
-  for (final r in scoops) {
-    body = Path.combine(PathOperation.union, body, Path()..addOval(r));
-  }
+  final scoops = _turdScoops(s);
+  final body = turdBodyPath(s);
 
   // Fill with a soft top-to-bottom brown gradient (soft-serve look).
   final bodyPaint = Paint()

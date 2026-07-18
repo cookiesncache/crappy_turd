@@ -55,4 +55,9 @@ abstract final class GameConstants {
   /// Starting x for a newly spawned pipe, just off the right edge (fraction
   /// of screen width).
   static const double pipeSpawnX = 1.15;
+
+  /// How long the game-over overlay takes to fade in once the run ends.
+  /// Starts equal to [titleFadeDuration] but kept as its own constant so
+  /// the two overlays' timing can be tuned independently.
+  static const Duration gameOverFadeDuration = Duration(milliseconds: 300);
 }
