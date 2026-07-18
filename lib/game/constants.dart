@@ -34,4 +34,25 @@ abstract final class GameConstants {
 
   /// How long the title overlay takes to fade out once play starts.
   static const Duration titleFadeDuration = Duration(milliseconds: 300);
+
+  /// Pipe width as a fraction of screen width.
+  static const double pipeWidth = 0.14;
+
+  /// Vertical gap a pipe leaves for the turd to fly through (fraction of
+  /// screen height).
+  static const double gapHeight = 0.30;
+
+  /// Minimum clearance kept between a pipe's gap and the ceiling/ground
+  /// (fraction of screen height).
+  static const double gapMargin = 0.05;
+
+  /// Pipe scroll speed, in screen-widths per second (leftward).
+  static const double pipeSpeed = 0.35;
+
+  /// Seconds between pipe spawns.
+  static const double spawnInterval = 1.7;
+
+  /// Starting x for a newly spawned pipe, just off the right edge (fraction
+  /// of screen width).
+  static const double pipeSpawnX = 1.15;
 }

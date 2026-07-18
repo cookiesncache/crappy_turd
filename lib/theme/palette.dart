@@ -21,6 +21,10 @@ abstract final class Palette {
   static const Color ground = Color(0xFF93DC82);
   static const Color groundShadow = Color(0xFF6FBF63);
 
+  // Pipes (friendly, non-scary green, harmonising with the ground).
+  static const Color pipeGreen = Color(0xFF6FCF6B);
+  static const Color pipeGreenDark = Color(0xFF4A9E48);
+
   // Turd body (top -> bottom, used for the soft-serve gradient).
   static const Color turdLight = Color(0xFFB07A50);
   static const Color turdMid = Color(0xFF8C5A35);

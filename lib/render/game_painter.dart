@@ -1,23 +1,28 @@
 import 'dart:math' as math;
 
 import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/models/pipe.dart';
 import 'package:crappy_turd/models/turd.dart';
+import 'package:crappy_turd/render/pipe_painter.dart';
 import 'package:crappy_turd/render/turd_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
 /// Paints the whole game world each frame: a bright sky with a rainbow, a
-/// grassy ground, and the turd at its current height and tilt.
+/// grassy ground, scrolling pipes, and the turd at its current height and
+/// tilt.
 class GamePainter extends CustomPainter {
-  const GamePainter({required this.turd});
+  const GamePainter({required this.turd, required this.pipes});
 
   final Turd turd;
+  final List<Pipe> pipes;
 
   @override
   void paint(Canvas canvas, Size size) {
     _paintSky(canvas, size);
     _paintRainbow(canvas, size);
     _paintGround(canvas, size);
+    paintPipes(canvas, size, pipes);
     _paintTurd(canvas, size);
   }
 

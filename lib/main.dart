@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/game/game_status.dart';
+import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/game_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
@@ -27,10 +28,10 @@ class CrappyTurdApp extends StatelessWidget {
 }
 
 /// Hosts the game: a [Ticker]-driven loop always runs — hovering the turd
-/// on the title screen, then applying gravity once play starts — and a tap
-/// makes it flap. The same [GamePainter] draws the scene throughout, so the
-/// title-to-gameplay handoff has no visual cut. Pipes, collision, and
-/// scoring arrive in later milestones.
+/// on the title screen, then applying gravity and scrolling pipes once play
+/// starts — and a tap makes it flap. The same [GamePainter] draws the scene
+/// throughout, so the title-to-gameplay handoff has no visual cut.
+/// Collision and scoring arrive in later milestones.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -41,6 +42,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen>
     with SingleTickerProviderStateMixin {
   final Turd _turd = Turd();
+  final PipeField _pipeField = PipeField();
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
   GameStatus _status = GameStatus.title;
@@ -64,6 +66,7 @@ class _GameScreenState extends State<GameScreen>
         _turd.hover(t);
       } else {
         _turd.update(dt);
+        _pipeField.update(dt);
       }
     });
   }
@@ -90,7 +93,7 @@ class _GameScreenState extends State<GameScreen>
           children: [
             CustomPaint(
               size: Size.infinite,
-              painter: GamePainter(turd: _turd),
+              painter: GamePainter(turd: _turd, pipes: _pipeField.pipes),
             ),
             IgnorePointer(
               child: AnimatedOpacity(
