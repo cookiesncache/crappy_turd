@@ -8,6 +8,7 @@ import 'package:crappy_turd/game/game_status.dart';
 import 'package:crappy_turd/game/particle_field.dart';
 import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/game/scoring.dart';
+import 'package:crappy_turd/game/sound_manager.dart';
 import 'package:crappy_turd/game/trail_field.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/game_painter.dart';
@@ -53,6 +54,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final CloudField _cloudField = CloudField();
   final ParticleField _particleField = ParticleField();
   final TrailField _trailField = TrailField();
+  final SoundManager _soundManager = SoundManager();
   late final Ticker _ticker;
 
   /// Drives the brief post-collision screen shake (see [build]'s shake
@@ -71,6 +73,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   /// The best score seen so far this session. In-memory only -- persisting
   /// it across app restarts is a later milestone.
   int _best = 0;
+
+  /// Whether sound effects are currently silenced. In-memory only, same as
+  /// [_best] -- persisting this across app restarts is a later milestone.
+  /// Kept in sync with [_soundManager]'s own `muted` field by every toggle.
+  bool _muted = false;
 
   /// The real pixel size of the game canvas, refreshed on every [build] so
   /// collision detection (which needs actual pixel geometry, not just
@@ -116,7 +123,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Scoring and dying are independent per-frame events; tally any
           // pipes the turd has newly flown past before checking whether
           // this frame is also the one where it dies.
-          _score += countPipesPassed(_pipeField.pipes);
+          final passedThisTick = countPipesPassed(_pipeField.pipes);
+          if (passedThisTick > 0) {
+            unawaited(_soundManager.playScore());
+          }
+          _score += passedThisTick;
           // Guards the impossible-in-practice case of a tick firing before
           // the first build/layout has ever run — the player can't reach
           // `playing` before at least one build (a tap is required first),
@@ -127,6 +138,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _particleField.burstDeath(GameConstants.turdX, _turd.y);
             _turd.impact();
             unawaited(_shakeController.forward(from: 0));
+            unawaited(_soundManager.playDeath());
             if (_score > _best) {
               _best = _score;
             }
@@ -144,6 +156,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _flap() {
     _turd.flap();
     _particleField.burstFlap(GameConstants.turdX, _turd.y);
+    unawaited(_soundManager.playFlap());
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -166,6 +179,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void dispose() {
     _ticker.dispose();
     _shakeController.dispose();
+    unawaited(_soundManager.dispose());
     super.dispose();
   }
 
@@ -255,6 +269,32 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
             if (_status == GameStatus.playing)
               _ScoreHud(key: const ValueKey('scoreHud'), score: _score),
+            // Deliberately a direct Stack child -- NOT nested inside the
+            // IgnorePointer wrapping the AnimatedSwitcher overlay above --
+            // and always visible regardless of [_status], unlike that
+            // overlay. An IconButton has its own internal tap recognizer,
+            // which wins the gesture arena over the outer GestureDetector's
+            // for any pointer down that lands on the button itself, so
+            // tapping it does not also register as a flap/restart tap on
+            // the game below (see the widget test covering exactly this).
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12, right: 4),
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _muted = !_muted;
+                      _soundManager.muted = _muted;
+                    });
+                  },
+                  icon: Icon(
+                    _muted ? Icons.volume_off : Icons.volume_up,
+                    color: Palette.turdDark,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -68,4 +68,50 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+
+  testWidgets(
+    'tapping the mute button toggles it without also registering as a '
+    'flap/restart tap on the game underneath',
+    (tester) async {
+      await tester.pumpWidget(const CrappyTurdApp());
+
+      // Starts unmuted, on the title screen.
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
+      expect(find.byIcon(Icons.volume_off), findsNothing);
+      expect(find.text('Tap to start'), findsOneWidget);
+
+      // Tap the mute button itself -- NOT the outer GestureDetector's own
+      // area -- via a real hit test, exactly as a player's tap would be
+      // dispatched.
+      await tester.tap(find.byIcon(Icons.volume_up));
+      await tester.pump();
+
+      // The button's own tap registered: the icon flipped.
+      expect(find.byIcon(Icons.volume_off), findsOneWidget);
+      expect(find.byIcon(Icons.volume_up), findsNothing);
+
+      // Crucially, the tap must NOT also have bubbled through to the
+      // underlying GestureDetector's onTapDown as a flap/restart tap --
+      // if it had, GameStatus would have left `title` for `playing`, and
+      // the title overlay's AnimatedSwitcher would fade it out for good.
+      // Advance past the full cross-fade duration (as the game-over
+      // restart test above does) so a "did leave title" bug can't hide
+      // behind a still-mid-transition outgoing child.
+      await tester.pump(
+        GameConstants.overlayFadeDuration + const Duration(milliseconds: 50),
+      );
+      expect(find.text('Tap to start'), findsOneWidget);
+
+      // Tapping again toggles it back, confirming the button keeps
+      // working (not just a one-shot fluke) and that the surrounding game
+      // still hasn't budged from the title screen after two taps.
+      await tester.tap(find.byIcon(Icons.volume_off));
+      await tester.pump();
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
+      expect(find.text('Tap to start'), findsOneWidget);
+
+      // Replace the tree to dispose the game-loop ticker cleanly.
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }
