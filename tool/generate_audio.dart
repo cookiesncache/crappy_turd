@@ -34,11 +34,22 @@ const int noiseSeed = 20260719;
 // ---------------------------------------------------------------------
 
 // --- flap.wav: sawtooth "wet buzz" fart, ~0.35s ---
+// Rebuilt after feedback that the original (a symmetric sine-wobble
+// vibrato around a fixed pitch) read as "space"/sci-fi rather than a
+// fart: that oscillating up-down wobble on an otherwise clean sawtooth is
+// exactly the classic synth-lead "UFO"/laser-charge patch. Swapped for a
+// genuinely RISING pitch sweep (the classic cartoon-raspberry contour),
+// with a much larger noise component to break up the clean tone into
+// something grittier/more organic, plus a fast amplitude flutter to
+// suggest buzzing lips rather than a steady electronic tone.
 const double flapDuration = 0.35;
-const double flapBaseFreq = 110;
-const double flapWobbleDepth = 25;
-const double flapWobbleRate = 9;
-const double flapNoiseMix = 0.15;
+const double flapStartFreq = 85;
+const double flapEndFreq = 190;
+const double flapWobbleDepth = 10;
+const double flapWobbleRate = 18;
+const double flapNoiseMix = 0.4;
+const double flapTremoloRate = 30;
+const double flapTremoloDepth = 0.3;
 const double flapAttackTime = 0.01;
 const double flapDecayRate = 6;
 const int flapPeakAmplitude = 21000;
@@ -77,20 +88,26 @@ void main() {
   );
 }
 
-/// A sawtooth wave whose INSTANTANEOUS frequency wobbles around
-/// [flapBaseFreq], mixed with a touch of white noise, under a fast-attack /
-/// exponential-decay envelope.
+/// A sawtooth wave whose INSTANTANEOUS frequency RISES from [flapStartFreq]
+/// to [flapEndFreq] over the sound's duration (the classic cartoon-
+/// raspberry contour), with a small, fast wobble layered on top for
+/// texture, mixed with a substantial amount of white noise to keep it
+/// grainy/organic rather than a clean electronic tone, and a fast
+/// amplitude flutter (tremolo) suggesting buzzing lips -- all under a
+/// fast-attack/exponential-decay envelope.
 ///
-/// The wobble LFO (`sin(2*pi*flapWobbleRate*t)`) is a smooth, continuous
-/// function of wall-clock time `t`, so it can be evaluated directly each
-/// sample with no accumulation needed. The sawtooth CARRIER can't be
-/// evaluated that way, though: a sawtooth is built by wrapping a phase
-/// value, and if the frequency feeding it changes from sample to sample,
-/// naively recomputing `freq(t) * t` each sample would make the phase jump
-/// discontinuously whenever `freq` changes -- an audible click every
-/// sample. Instead the carrier phase is integrated: each sample advances
-/// phase by `freq(t) / sampleRate` (i.e. `freq(t) * dt`), accumulating
-/// smoothly frame-to-frame no matter how `freq` wobbles.
+/// The rise (`flapStartFreq + (flapEndFreq-flapStartFreq)*progress`) and
+/// the wobble LFO (`sin(2*pi*flapWobbleRate*t)`) are both smooth,
+/// continuous functions of wall-clock time `t`, so they can be evaluated
+/// directly each sample with no accumulation needed on their own. The
+/// sawtooth CARRIER can't be evaluated that way, though: a sawtooth is
+/// built by wrapping a phase value, and if the frequency feeding it
+/// changes from sample to sample, naively recomputing `freq(t) * t` each
+/// sample would make the phase jump discontinuously whenever `freq`
+/// changes -- an audible click every sample. Instead the carrier phase is
+/// integrated: each sample advances phase by `freq(t) / sampleRate` (i.e.
+/// `freq(t) * dt`), accumulating smoothly frame-to-frame no matter how
+/// `freq` rises or wobbles.
 Int16List _synthFlap(math.Random random) {
   final sampleCount = (flapDuration * sampleRate).round();
   final samples = Float64List(sampleCount);
@@ -98,8 +115,10 @@ Int16List _synthFlap(math.Random random) {
 
   for (var i = 0; i < sampleCount; i++) {
     final t = i / sampleRate;
+    final progress = t / flapDuration;
+    final risingFreq = flapStartFreq + (flapEndFreq - flapStartFreq) * progress;
     final instantFreq =
-        flapBaseFreq +
+        risingFreq +
         flapWobbleDepth * math.sin(2 * math.pi * flapWobbleRate * t);
     phase += instantFreq / sampleRate;
     phase -= phase.floorToDouble();
@@ -108,13 +127,20 @@ Int16List _synthFlap(math.Random random) {
     final noise = random.nextDouble() * 2 - 1;
     final wave = (1 - flapNoiseMix) * saw + flapNoiseMix * noise;
 
+    // Ranges within [1 - flapTremoloDepth, 1.0] -- always positive, so
+    // this only ever attenuates (never inverts/boosts) the signal.
+    final tremolo =
+        1 -
+        flapTremoloDepth *
+            (0.5 + 0.5 * math.sin(2 * math.pi * flapTremoloRate * t));
+
     final envelope = _attackDecayEnvelope(
       t: t,
       attackTime: flapAttackTime,
       decayRate: flapDecayRate,
     );
 
-    samples[i] = envelope * wave;
+    samples[i] = envelope * tremolo * wave;
   }
 
   _applyReleaseFade(samples);

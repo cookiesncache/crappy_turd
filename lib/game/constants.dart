@@ -152,5 +152,14 @@ abstract final class GameConstants {
   // --- M6: motion trail ---
 
   /// How many seconds of turd (y, tilt) history the motion trail retains.
-  static const double trailWindow = 0.2;
+  /// Kept short and paired with [trailSampleInterval]/a low ghost opacity
+  /// (see turd_painter.dart) so the trail reads as a few subtle echoes,
+  /// not a distracting smear.
+  static const double trailWindow = 0.12;
+
+  /// Minimum seconds between recorded trail samples. Without this, a new
+  /// sample every single tick (~60/sec) packed [trailWindow] full of
+  /// near-identical, overlapping ghosts that read as a blur rather than a
+  /// few distinct echoes.
+  static const double trailSampleInterval = 0.045;
 }

@@ -107,8 +107,10 @@ void paintTurdTrail(Canvas canvas, Size size, List<TrailSample> samples) {
   final body = turdBodyPath(turdSize);
   // A cap on how opaque even the very newest ghost gets, so the trail
   // always reads as a subtle wisp behind the turd rather than a second
-  // solid copy of it. Feel-tunable.
-  const maxGhostAlpha = 0.3;
+  // solid copy of it. Feel-tunable. Lowered after feedback that the
+  // original 0.3 read as distracting "ghosting" rather than a subtle
+  // touch.
+  const maxGhostAlpha = 0.14;
   for (final sample in samples) {
     final fade = (1 - sample.age / GameConstants.trailWindow).clamp(0.0, 1.0);
     final paint = Paint()
