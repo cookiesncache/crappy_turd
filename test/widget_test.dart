@@ -1,3 +1,4 @@
+import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,18 +18,15 @@ void main() {
       await tester.pumpWidget(const CrappyTurdApp());
 
       // _GameScreenState/_status/_turd are library-private, so there's no
-      // direct handle on the state machine from here. The game-over
-      // overlay's AnimatedOpacity.opacity is the one state signal exposed
-      // through the public widget tree, so it doubles as this test's proxy
-      // for "is GameStatus.gameOver active right now".
-      AnimatedOpacity gameOverOpacity() => tester.widget<AnimatedOpacity>(
-        find.ancestor(
-          of: find.text('Game Over'),
-          matching: find.byType(AnimatedOpacity),
-        ),
-      );
-
-      expect(gameOverOpacity().opacity, 0);
+      // direct handle on the state machine from here. Since the game-over
+      // branch of the AnimatedSwitcher is a real _GameOverPanel (with a
+      // "Game Over" Text in it) while the playing branch is just a
+      // SizedBox.shrink, the presence/absence of that text in the PUBLIC
+      // widget tree is a robust proxy for "is GameStatus.gameOver active
+      // right now" -- simpler than the old approach of reading an
+      // AnimatedOpacity's current opacity value, and it doesn't rely on
+      // any particular animation widget being used under the hood.
+      expect(find.text('Game Over'), findsNothing);
 
       // Leave the title screen and start falling.
       await tester.tap(find.byType(GameScreen));
@@ -42,14 +40,29 @@ void main() {
         await tester.pump(const Duration(milliseconds: 16));
       }
 
-      expect(gameOverOpacity().opacity, 1);
+      expect(find.text('Game Over'), findsOneWidget);
 
-      // Tap to restart: should immediately hide the game-over overlay
-      // again (a stuck/never-clearing overlay would fail this).
+      // The game-over panel shows both the run's score and the session
+      // best. The exact number reached before the turd hits the ground is
+      // timing-dependent on pipe-spawn/travel math, so assert only that
+      // the labelled lines exist (loose, RegExp-based substring matches)
+      // rather than hardcoding a specific score -- the precise counting
+      // logic itself is rigorously covered by test/scoring_test.dart.
+      expect(find.textContaining(RegExp(r'^Score: \d+$')), findsOneWidget);
+      expect(find.textContaining(RegExp(r'Best: \d+')), findsOneWidget);
+
+      // Tap to restart. AnimatedSwitcher keeps the OUTGOING child mounted
+      // (mid cross-fade) for the duration of the transition, so a single
+      // zero-time pump() isn't enough to observe it gone -- advance past
+      // overlayFadeDuration first, then confirm the game-over panel has
+      // fully cleared (a stuck/never-clearing overlay would fail this).
       await tester.tap(find.byType(GameScreen));
       await tester.pump();
+      await tester.pump(
+        GameConstants.overlayFadeDuration + const Duration(milliseconds: 50),
+      );
 
-      expect(gameOverOpacity().opacity, 0);
+      expect(find.text('Game Over'), findsNothing);
 
       // Replace the tree to dispose the game-loop ticker cleanly.
       await tester.pumpWidget(const SizedBox());

@@ -34,8 +34,9 @@ class Pipe {
   /// Vertical centre of the gap, fraction of screen height.
   final double gapCenterY;
 
-  /// Whether the turd has already flown past this pipe. Unused until a
-  /// later milestone adds scoring.
+  /// Whether the turd has already flown past this pipe. Set by
+  /// `countPipesPassed` (see `lib/game/scoring.dart`) so each pipe is only
+  /// ever counted once toward the score.
   bool passed = false;
 
   /// True once the pipe has fully scrolled past the left edge.

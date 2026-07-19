@@ -32,9 +32,6 @@ abstract final class GameConstants {
   /// Angular speed (radians/sec) of the title-screen bob.
   static const double bobSpeed = 2.4;
 
-  /// How long the title overlay takes to fade out once play starts.
-  static const Duration titleFadeDuration = Duration(milliseconds: 300);
-
   /// Pipe width as a fraction of screen width.
   static const double pipeWidth = 0.14;
 
@@ -56,8 +53,9 @@ abstract final class GameConstants {
   /// of screen width).
   static const double pipeSpawnX = 1.15;
 
-  /// How long the game-over overlay takes to fade in once the run ends.
-  /// Starts equal to [titleFadeDuration] but kept as its own constant so
-  /// the two overlays' timing can be tuned independently.
-  static const Duration gameOverFadeDuration = Duration(milliseconds: 300);
+  /// How long the title/game-over overlays take to cross-fade when the
+  /// `AnimatedSwitcher` driving them swaps its child (e.g. title ->
+  /// playing, or playing -> game-over). A single shared duration since one
+  /// switcher now drives every overlay transition.
+  static const Duration overlayFadeDuration = Duration(milliseconds: 300);
 }

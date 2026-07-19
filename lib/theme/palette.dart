@@ -38,4 +38,12 @@ abstract final class Palette {
 
   // Misc.
   static const Color shadow = Color(0x33000000);
+
+  // Overlay panels (e.g. the game-over card) -- a soft, semi-opaque cream
+  // that reads clearly over the busy pipes/rainbow/ground scene without
+  // looking harsh or out of step with the rest of the pastel palette.
+  static const Color panelBackground = Color(0xF2FFF8EC);
+
+  // Accent used to celebrate a new/tied best score on the game-over panel.
+  static const Color gold = Color(0xFFE8A93B);
 }
