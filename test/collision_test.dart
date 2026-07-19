@@ -176,12 +176,26 @@ void main() {
         final flat = Turd()
           ..y = turdY
           ..velocity = 0;
-        final tilted = Turd()
-          ..y = turdY
-          ..velocity = 3; // tilt = (3 * 0.55).clamp(-0.5, 1.1) == 1.1
+
+        // From M6, `tilt` eases toward its velocity-driven target rather
+        // than snapping to it instantly (see Turd._easeTiltAndSquash), so
+        // a real tilt of ~1.1 (== (3 * 0.55).clamp(-0.5, 1.1)) has to be
+        // built up over several update() calls, not read straight off a
+        // freshly-set `velocity`. Each call re-pins `y` back to a safe
+        // mid-air value first so the ground clamp never zeroes velocity
+        // out mid-loop -- which would otherwise pull the eased tilt back
+        // toward a target of 0 instead of the intended 1.1.
+        final tilted = Turd();
+        for (var i = 0; i < 40; i++) {
+          tilted
+            ..y = GameConstants.startY
+            ..velocity = 3
+            ..update(1 / 60);
+        }
+        tilted.y = turdY;
 
         expect(flat.tilt, 0);
-        expect(tilted.tilt, closeTo(1.1, 1e-9));
+        expect(tilted.tilt, closeTo(1.1, 1e-2));
 
         expect(
           turdCollidesWithPipe(flat, pipe, testSize),

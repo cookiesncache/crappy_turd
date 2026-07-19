@@ -45,6 +45,13 @@ bool turdCollidesWithPipe(Turd turd, Pipe pipe, Size size) {
     GameConstants.turdX * size.width,
     turd.y * size.height,
   );
+  // Deliberately translate + rotate ONLY -- no scale. From M6, rendering
+  // also applies a small render-only squash/stretch scale on flap/impact
+  // (see Turd.scaleX/scaleY and game_painter.dart's `_paintTurd`) for a
+  // few-percent visual wobble. Collision intentionally keeps using this
+  // unscaled silhouette: that's a deliberate simplification, not an
+  // oversight -- a flap/impact's squash should never change what the turd
+  // can or can't fly through.
   final transform = Matrix4.identity()
     ..translateByDouble(center.dx, center.dy, 0, 1)
     ..rotateZ(turd.tilt);

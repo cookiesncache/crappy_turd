@@ -46,4 +46,11 @@ abstract final class Palette {
 
   // Accent used to celebrate a new/tied best score on the game-over panel.
   static const Color gold = Color(0xFFE8A93B);
+
+  // Background parallax clouds -- very light, semi-transparent
+  // blue-white so they read as soft and distant against the sky gradient.
+  static const Color cloud = Color(0x80F5FBFF);
+
+  // Soft cream/white puff used for the flap "poof" particle burst.
+  static const Color poofParticle = Color(0xFFFFF6E2);
 }

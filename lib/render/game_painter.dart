@@ -1,29 +1,51 @@
 import 'dart:math' as math;
 
 import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/models/cloud.dart';
+import 'package:crappy_turd/models/particle.dart';
 import 'package:crappy_turd/models/pipe.dart';
+import 'package:crappy_turd/models/trail_sample.dart';
 import 'package:crappy_turd/models/turd.dart';
+import 'package:crappy_turd/render/cloud_painter.dart';
+import 'package:crappy_turd/render/particle_painter.dart';
 import 'package:crappy_turd/render/pipe_painter.dart';
 import 'package:crappy_turd/render/turd_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
-/// Paints the whole game world each frame: a bright sky with a rainbow, a
-/// grassy ground, scrolling pipes, and the turd at its current height and
-/// tilt.
+/// Paints the whole game world each frame: a bright sky with drifting
+/// clouds and a rainbow, a grassy ground, scrolling pipes, a fading motion
+/// trail, the turd at its current height/tilt/squash, and any live
+/// decorative particles on top of everything.
 class GamePainter extends CustomPainter {
-  const GamePainter({required this.turd, required this.pipes});
+  const GamePainter({
+    required this.turd,
+    required this.pipes,
+    required this.clouds,
+    required this.trailSamples,
+    required this.particles,
+  });
 
   final Turd turd;
   final List<Pipe> pipes;
+  final List<Cloud> clouds;
+  final List<TrailSample> trailSamples;
+  final List<Particle> particles;
 
   @override
   void paint(Canvas canvas, Size size) {
     _paintSky(canvas, size);
+    // Furthest-back layer: clouds drift behind the rainbow and everything
+    // else.
+    paintClouds(canvas, size, clouds);
     _paintRainbow(canvas, size);
     _paintGround(canvas, size);
     paintPipes(canvas, size, pipes);
+    paintTurdTrail(canvas, size, trailSamples);
     _paintTurd(canvas, size);
+    // Frontmost layer: particle bursts read as being in front of
+    // everything, including the turd itself.
+    paintParticles(canvas, size, particles);
   }
 
   void _paintSky(Canvas canvas, Size size) {
@@ -78,7 +100,13 @@ class GamePainter extends CustomPainter {
     canvas
       ..save()
       ..translate(center.dx, center.dy)
-      ..rotate(turd.tilt);
+      ..rotate(turd.tilt)
+      // RENDER-ONLY squash/stretch: a few-percent scale wobble on
+      // flap/impact. Deliberately NOT applied in
+      // `lib/game/collision.dart`, which keeps translating+rotating the
+      // unscaled silhouette -- see the comment there. Adding a scale here
+      // and nowhere else is intentional, not an oversight.
+      ..scale(turd.scaleX, turd.scaleY);
     paintTurd(canvas, turdSize);
     canvas.restore();
   }

@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:crappy_turd/game/cloud_field.dart';
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/game/game_status.dart';
+import 'package:crappy_turd/game/particle_field.dart';
 import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/game/scoring.dart';
+import 'package:crappy_turd/game/trail_field.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/game_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
@@ -43,11 +47,21 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen>
-    with SingleTickerProviderStateMixin {
+class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final Turd _turd = Turd();
   final PipeField _pipeField = PipeField();
+  final CloudField _cloudField = CloudField();
+  final ParticleField _particleField = ParticleField();
+  final TrailField _trailField = TrailField();
   late final Ticker _ticker;
+
+  /// Drives the brief post-collision screen shake (see [build]'s shake
+  /// wrapper around the [CustomPaint]). Needs its own vsync alongside the
+  /// main game [Ticker], which is why this State uses
+  /// [TickerProviderStateMixin] rather than the single-client
+  /// [SingleTickerProviderStateMixin] the rest of the app would otherwise
+  /// only need.
+  late final AnimationController _shakeController;
   Duration _lastTick = Duration.zero;
   GameStatus _status = GameStatus.title;
 
@@ -68,6 +82,10 @@ class _GameScreenState extends State<GameScreen>
     super.initState();
     _ticker = createTicker(_onTick);
     unawaited(_ticker.start());
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: GameConstants.shakeDuration,
+    );
   }
 
   void _onTick(Duration elapsed) {
@@ -77,12 +95,23 @@ class _GameScreenState extends State<GameScreen>
     // Skip the first frame and any large hitches so the physics stays stable.
     if (dt <= 0 || dt > 0.1) return;
     setState(() {
+      // Ambient effects run regardless of game status: clouds drift
+      // continuously (including on the title screen and while frozen at
+      // game-over), and any in-flight particle burst or trail ghost keeps
+      // aging/fading out rather than instantly vanishing on a status
+      // change.
+      _cloudField.update(dt);
+      _particleField.update(dt);
+      _trailField.update(dt);
       switch (_status) {
         case GameStatus.title:
           final t = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
           _turd.hover(t);
         case GameStatus.playing:
           _turd.update(dt);
+          // Sample the motion trail only while actually playing -- a
+          // frozen or hovering turd shouldn't leave a trail.
+          _trailField.sample(_turd.y, _turd.tilt);
           _pipeField.update(dt);
           // Scoring and dying are independent per-frame events; tally any
           // pipes the turd has newly flown past before checking whether
@@ -95,6 +124,9 @@ class _GameScreenState extends State<GameScreen>
           if (_size != Size.zero &&
               checkCollision(_turd, _pipeField.pipes, _size)) {
             _status = GameStatus.gameOver;
+            _particleField.burstDeath(GameConstants.turdX, _turd.y);
+            _turd.impact();
+            unawaited(_shakeController.forward(from: 0));
             if (_score > _best) {
               _best = _score;
             }
@@ -106,23 +138,34 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
+  /// Flap the turd and spawn a matching poof of particles at its current
+  /// position. Shared by every tap that flaps -- the title/playing taps
+  /// AND the game-over restart tap alike -- so a flap is always a flap.
+  void _flap() {
+    _turd.flap();
+    _particleField.burstFlap(GameConstants.turdX, _turd.y);
+  }
+
   void _onTapDown(TapDownDetails details) {
     setState(() {
       if (_status == GameStatus.gameOver) {
         _turd.reset();
         _pipeField.reset();
+        _particleField.reset();
+        _trailField.reset();
         // The best score is NOT reset here -- it persists for the lifetime
         // of the running app, across as many runs as the player takes.
         _score = 0;
       }
       _status = GameStatus.playing;
-      _turd.flap();
+      _flap();
     });
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -153,6 +196,33 @@ class _GameScreenState extends State<GameScreen>
     };
   }
 
+  /// Wraps the game scene in a small, fast, decaying jitter driven by
+  /// [_shakeController]: strongest right at the moment of impact
+  /// (`_shakeController.value == 0`), fading to nothing by the time the
+  /// controller finishes. Only the scene itself shakes -- the
+  /// overlay/HUD Stack children outside this widget are untouched.
+  Widget _buildShakingScene(Widget scene) {
+    return AnimatedBuilder(
+      animation: _shakeController,
+      builder: (context, child) {
+        final t = _shakeController.value;
+        final decay = 1 - t;
+        final dx =
+            math.sin(t * GameConstants.shakeFrequency) *
+            GameConstants.shakeMagnitude *
+            _size.width *
+            decay;
+        final dy =
+            math.cos(t * GameConstants.shakeFrequency * 1.3) *
+            GameConstants.shakeMagnitude *
+            _size.height *
+            decay;
+        return Transform.translate(offset: Offset(dx, dy), child: child);
+      },
+      child: scene,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _size = MediaQuery.sizeOf(context);
@@ -161,13 +231,25 @@ class _GameScreenState extends State<GameScreen>
         onTapDown: _onTapDown,
         child: Stack(
           children: [
-            CustomPaint(
-              size: Size.infinite,
-              painter: GamePainter(turd: _turd, pipes: _pipeField.pipes),
+            _buildShakingScene(
+              CustomPaint(
+                size: Size.infinite,
+                painter: GamePainter(
+                  turd: _turd,
+                  pipes: _pipeField.pipes,
+                  clouds: _cloudField.clouds,
+                  trailSamples: _trailField.samples,
+                  particles: _particleField.particles,
+                ),
+              ),
             ),
             IgnorePointer(
               child: AnimatedSwitcher(
                 duration: GameConstants.overlayFadeDuration,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(scale: animation, child: child),
+                ),
                 child: _overlayForStatus(),
               ),
             ),
@@ -221,16 +303,22 @@ class _TitleOverlayState extends State<_TitleOverlay>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Crappy Turd',
-            style: TextStyle(
-              fontSize: 44,
-              fontWeight: FontWeight.w900,
-              color: Palette.turdDark,
-              shadows: [
-                Shadow(color: Colors.white, blurRadius: 4),
-                Shadow(color: Colors.white, blurRadius: 12),
-              ],
+          ScaleTransition(
+            scale: Tween<double>(
+              begin: 1,
+              end: 1.05,
+            ).animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
+            child: const Text(
+              'Crappy Turd',
+              style: TextStyle(
+                fontSize: 44,
+                fontWeight: FontWeight.w900,
+                color: Palette.turdDark,
+                shadows: [
+                  Shadow(color: Colors.white, blurRadius: 4),
+                  Shadow(color: Colors.white, blurRadius: 12),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),

@@ -13,12 +13,53 @@ class Turd {
   static const double _floor =
       GameConstants.groundY - GameConstants.turdSize / 2;
 
-  /// A gentle tilt (radians) driven by velocity: nose-up while flapping,
-  /// nose-down while falling.
-  double get tilt => (velocity * 0.55).clamp(-0.5, 1.1);
+  /// The tilt actually displayed (and collided with -- see
+  /// `lib/game/collision.dart`), eased toward the velocity-driven target
+  /// each frame in [update]/[hover] rather than snapping to it instantly.
+  /// Starts level.
+  double _displayTilt = 0;
 
-  /// Give the turd an upward kick.
-  void flap() => velocity = GameConstants.flapVelocity;
+  /// Squash/stretch pulse: positive stretches the turd taller/thinner (set
+  /// by [flap]), negative squashes it shorter/wider (set by [impact]).
+  /// Decays back toward 0 every [update]/[hover] call. RENDER-ONLY -- see
+  /// [scaleX]/[scaleY].
+  double _squashPulse = 0;
+
+  /// The last absolute time (seconds) passed to [hover], used to derive a
+  /// per-call `dt` for easing tilt/squash even though `hover`'s own
+  /// parameter is an absolute elapsed time, not a delta. `null` until
+  /// `hover` has been called at least once.
+  double? _lastHoverT;
+
+  /// A gentle tilt (radians), eased toward a velocity-driven target: nose-
+  /// up while flapping, nose-down while falling. This is the value both
+  /// rendered AND rotated by in `turdCollidesWithPipe` -- unlike
+  /// [scaleX]/[scaleY], tilt has always been part of collision, so easing
+  /// it here changes both together, on purpose.
+  double get tilt => _displayTilt;
+
+  /// Horizontal squash/stretch scale factor (1.0 = no squash/stretch).
+  /// RENDER-ONLY -- deliberately not read by `lib/game/collision.dart`. See
+  /// the comment there and in `lib/render/game_painter.dart`'s
+  /// `_paintTurd`.
+  double get scaleX => 1 - _squashPulse * 0.5;
+
+  /// Vertical squash/stretch scale factor (1.0 = no squash/stretch).
+  /// RENDER-ONLY -- see [scaleX].
+  double get scaleY => 1 + _squashPulse;
+
+  /// Give the turd an upward kick, and a brief comedic stretch.
+  void flap() {
+    velocity = GameConstants.flapVelocity;
+    _squashPulse = GameConstants.flapStretchAmount;
+  }
+
+  /// A brief comedic squash, triggered at the exact moment of a fatal
+  /// collision. RENDER-ONLY: by the time this is called, collision and
+  /// scoring have already been decided, so this has zero effect on either.
+  void impact() {
+    _squashPulse = -GameConstants.impactSquashAmount;
+  }
 
   /// Idle animation for the title screen: gently bob around
   /// [GameConstants.startY] with
@@ -29,6 +70,9 @@ class Turd {
         GameConstants.startY +
         GameConstants.bobAmplitude * math.sin(t * GameConstants.bobSpeed);
     velocity = 0;
+    final dt = _lastHoverT == null ? 0.0 : t - _lastHoverT!;
+    _lastHoverT = t;
+    _easeTiltAndSquash(dt);
   }
 
   /// Advance the simulation by [dt] seconds.
@@ -42,11 +86,28 @@ class Turd {
       y = GameConstants.ceiling;
       velocity = 0;
     }
+    _easeTiltAndSquash(dt);
+  }
+
+  /// Eases [_displayTilt] toward the current velocity-driven target and
+  /// decays [_squashPulse] back toward 0, both via a frame-rate-independent
+  /// exponential decay (unlike a naive fixed-fraction-per-frame lerp, this
+  /// converges toward the same place regardless of how `dt` is chopped up).
+  void _easeTiltAndSquash(double dt) {
+    final target = (velocity * 0.55).clamp(-0.5, 1.1);
+    _displayTilt +=
+        (target - _displayTilt) *
+        (1 - math.exp(-GameConstants.tiltEaseRate * dt));
+    _squashPulse -=
+        _squashPulse * (1 - math.exp(-GameConstants.squashEaseRate * dt));
   }
 
   /// Return the turd to its starting state.
   void reset() {
     y = GameConstants.startY;
     velocity = 0;
+    _displayTilt = 0;
+    _squashPulse = 0;
+    _lastHoverT = null;
   }
 }

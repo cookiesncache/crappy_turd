@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/models/trail_sample.dart';
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
@@ -92,6 +94,32 @@ void paintTurd(Canvas canvas, double size) {
   );
 
   _paintFace(canvas, s);
+}
+
+/// Paints a fading motion-trail of past turd silhouettes: flat,
+/// semi-transparent brown ghosts with no face/gradient/outline (unlike the
+/// live turd itself), oldest to newest so newer ghosts draw over older
+/// ones. Purely decorative -- reuses [turdBodyPath], the exact same
+/// silhouette [paintTurd] fills, just rendered as a flat fading shadow
+/// instead of the full glossy render.
+void paintTurdTrail(Canvas canvas, Size size, List<TrailSample> samples) {
+  final turdSize = size.height * GameConstants.turdSize;
+  final body = turdBodyPath(turdSize);
+  // A cap on how opaque even the very newest ghost gets, so the trail
+  // always reads as a subtle wisp behind the turd rather than a second
+  // solid copy of it. Feel-tunable.
+  const maxGhostAlpha = 0.3;
+  for (final sample in samples) {
+    final fade = (1 - sample.age / GameConstants.trailWindow).clamp(0.0, 1.0);
+    final paint = Paint()
+      ..color = Palette.turdMid.withValues(alpha: maxGhostAlpha * fade);
+    canvas
+      ..save()
+      ..translate(GameConstants.turdX * size.width, sample.y * size.height)
+      ..rotate(sample.tilt)
+      ..drawPath(body, paint)
+      ..restore();
+  }
 }
 
 void _paintFace(Canvas canvas, double s) {
