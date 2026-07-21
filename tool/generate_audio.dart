@@ -42,16 +42,16 @@ const int noiseSeed = 20260719;
 // with a much larger noise component to break up the clean tone into
 // something grittier/more organic, plus a fast amplitude flutter to
 // suggest buzzing lips rather than a steady electronic tone.
-const double flapDuration = 0.35;
-const double flapStartFreq = 85;
-const double flapEndFreq = 190;
+const double flapDuration = 0.25;
+const double flapStartFreq = 200;
+const double flapEndFreq = 400;
 const double flapWobbleDepth = 10;
 const double flapWobbleRate = 18;
 const double flapNoiseMix = 0.4;
 const double flapTremoloRate = 30;
 const double flapTremoloDepth = 0.3;
 const double flapAttackTime = 0.01;
-const double flapDecayRate = 6;
+const double flapDecayRate = 12;
 const int flapPeakAmplitude = 21000;
 
 // --- score.wav: two square-wave "ding-ding" notes, ~0.15s total ---

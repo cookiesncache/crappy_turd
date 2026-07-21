@@ -51,6 +51,7 @@ abstract final class Palette {
   // blue-white so they read as soft and distant against the sky gradient.
   static const Color cloud = Color(0x80F5FBFF);
 
-  // Soft cream/white puff used for the flap "poof" particle burst.
-  static const Color poofParticle = Color(0xFFFFF6E2);
+  // Bright twinkle tones for the flap "sparkle" particle burst -- warm
+  // gold and pale white-gold, alternated per-particle for a glinting look.
+  static const Color sparkleWhite = Color(0xFFFFF9E6);
 }

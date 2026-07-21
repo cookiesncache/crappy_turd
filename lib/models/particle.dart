@@ -1,10 +1,12 @@
 import 'dart:ui' show Color;
 
-/// A single short-lived decorative particle (a flap "poof" or a death
+import 'package:crappy_turd/models/particle_shape.dart';
+
+/// A single short-lived decorative particle (a flap "sparkle" or a death
 /// "splat"): pure ambient effect with no gameplay impact. [x]/[y] are
 /// mutable (fraction of screen width/height respectively); [vx]/[vy]
-/// (fraction-per-second), [maxLife] (seconds), [size] (a render-size hint)
-/// and [color] are all fixed at spawn.
+/// (fraction-per-second), [maxLife] (seconds), [size] (a render-size hint),
+/// [color], [shape] and [spin] are all fixed at spawn.
 class Particle {
   Particle({
     required this.x,
@@ -14,6 +16,8 @@ class Particle {
     required this.maxLife,
     required this.size,
     required this.color,
+    required this.shape,
+    this.spin = 0,
   });
 
   /// Horizontal position, fraction of screen width.
@@ -40,6 +44,15 @@ class Particle {
 
   /// Fixed at spawn.
   final Color color;
+
+  /// Which shape `paintParticles` renders this particle as. Fixed at
+  /// spawn.
+  final ParticleShape shape;
+
+  /// A fixed rotation offset in radians, applied so a burst of several
+  /// [ParticleShape.sparkle] particles don't all point the same way.
+  /// Unused by [ParticleShape.soft]. Fixed at spawn.
+  final double spin;
 
   /// True once the particle has outlived [maxLife].
   bool get isDead => age >= maxLife;

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/models/particle.dart';
+import 'package:crappy_turd/models/particle_shape.dart';
 import 'package:crappy_turd/theme/palette.dart';
 
 /// Owns the live list of decorative particles (flap poofs, a death splat):
@@ -25,9 +26,9 @@ class ParticleField {
     particles.removeWhere((p) => p.isDead);
   }
 
-  /// A small poof of soft cream particles at ([originX], [originY])
-  /// (screen fractions), scattered generally upward/outward -- spawned on
-  /// every flap.
+  /// A small burst of twinkling gold/white sparkles at ([originX],
+  /// [originY]) (screen fractions), scattered generally upward/outward --
+  /// spawned on every flap.
   void burstFlap(double originX, double originY) {
     for (var i = 0; i < GameConstants.flapParticleCount; i++) {
       // Scatter within a wide cone centred on "straight up".
@@ -42,7 +43,11 @@ class ParticleField {
           vy: math.sin(angle) * speed,
           maxLife: GameConstants.flapParticleLife,
           size: GameConstants.flapParticleSize,
-          color: Palette.poofParticle,
+          color: _random.nextBool() ? Palette.gold : Palette.sparkleWhite,
+          shape: ParticleShape.sparkle,
+          // A sparkle's 4 points repeat every 90 degrees, so the full
+          // range of visually-distinct rotations is just one quarter turn.
+          spin: _random.nextDouble() * math.pi / 2,
         ),
       );
     }
@@ -67,6 +72,7 @@ class ParticleField {
           maxLife: GameConstants.deathParticleLife,
           size: GameConstants.deathParticleSize,
           color: _random.nextBool() ? Palette.turdMid : Palette.turdLight,
+          shape: ParticleShape.soft,
         ),
       );
     }
