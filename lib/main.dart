@@ -5,6 +5,7 @@ import 'package:crappy_turd/game/cloud_field.dart';
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/game/game_status.dart';
+import 'package:crappy_turd/game/high_score_store.dart';
 import 'package:crappy_turd/game/particle_field.dart';
 import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/game/scoring.dart';
@@ -40,7 +41,8 @@ class CrappyTurdApp extends StatelessWidget {
 /// throughout, so the title-to-gameplay handoff has no visual cut. A hit
 /// pipe or the ground ends the run (see [checkCollision]) and freezes the
 /// scene until the next tap restarts it, showing both the run's score and
-/// the best score seen so far this session.
+/// the best score across all runs, persisted across app restarts via
+/// [HighScoreStore].
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -55,6 +57,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final ParticleField _particleField = ParticleField();
   final TrailField _trailField = TrailField();
   final SoundManager _soundManager = SoundManager();
+  final HighScoreStore _highScoreStore = HighScoreStore();
   late final Ticker _ticker;
 
   /// Drives the brief post-collision screen shake (see [build]'s shake
@@ -70,12 +73,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   /// The current run's live score (pipes passed since the last restart).
   int _score = 0;
 
-  /// The best score seen so far this session. In-memory only -- persisting
-  /// it across app restarts is a later milestone.
+  /// The best score ever recorded, persisted across app restarts via
+  /// [_highScoreStore]. Starts at 0 and is overwritten once [_loadBest]'s
+  /// async load resolves, so a fresh app launch briefly reads 0 before the
+  /// real saved value (if any) arrives.
   int _best = 0;
 
-  /// Whether sound effects are currently silenced. In-memory only, same as
-  /// [_best] -- persisting this across app restarts is a later milestone.
+  /// Whether sound effects are currently silenced. In-memory only -- unlike
+  /// [_best], persisting this across app restarts is out of scope for now.
   /// Kept in sync with [_soundManager]'s own `muted` field by every toggle.
   bool _muted = false;
 
@@ -93,6 +98,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: GameConstants.shakeDuration,
     );
+    unawaited(_loadBest());
+  }
+
+  /// Loads the persisted best score (if any) once [_highScoreStore]'s async
+  /// read resolves, and applies it to [_best].
+  ///
+  /// Takes the max of the loaded value and whatever [_best] already holds,
+  /// rather than blindly assigning it. In this app's actual reachable state
+  /// space that ordering risk isn't real today -- reaching a game-over that
+  /// sets [_best] requires a prior tap past the title screen plus real
+  /// elapsed gameplay time, both far slower than this near-instant local
+  /// read -- but taking the max costs nothing and keeps this correct even
+  /// if that timing invariant is ever broken by a future change, rather
+  /// than silently depending on it. If that race ever DID happen, the
+  /// freshly-resolved max can exceed what's actually sitting in storage
+  /// (a same-session game-over could have already saved a lower score
+  /// before this load resolved) -- re-saving here closes that gap, so the
+  /// store itself, not just this session's in-memory value, ends up
+  /// correct too.
+  Future<void> _loadBest() async {
+    final saved = await _highScoreStore.load();
+    if (!mounted) return;
+    final resolved = math.max(_best, saved);
+    setState(() {
+      _best = resolved;
+    });
+    if (resolved > saved) {
+      unawaited(_highScoreStore.save(resolved));
+    }
   }
 
   void _onTick(Duration elapsed) {
@@ -141,6 +175,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             unawaited(_soundManager.playDeath());
             if (_score > _best) {
               _best = _score;
+              unawaited(_highScoreStore.save(_best));
             }
           }
         case GameStatus.gameOver:
@@ -304,9 +339,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
 /// The idle title card: a bold game title plus a gently pulsing hint,
 /// shown until the first tap and then faded away by [_GameScreenState].
-/// Also shows a "Best: N" line beneath the hint, but only once a run has
-/// actually ended at least once this session ([best] > 0) -- a fresh app
-/// launch shouldn't advertise "Best: 0".
+/// Also shows a "Best: N" line beneath the hint, but only once there is an
+/// actual best to show ([best] > 0) -- whether restored from a previous
+/// session's persisted high score or set by a run that has already ended
+/// this session -- since a genuinely fresh install with nothing saved and
+/// nothing yet scored shouldn't advertise "Best: 0".
 class _TitleOverlay extends StatefulWidget {
   const _TitleOverlay({required this.best, super.key});
 

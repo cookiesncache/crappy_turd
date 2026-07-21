@@ -2,8 +2,19 @@ import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // _GameScreenState.initState() now fires off a shared_preferences read
+  // (see HighScoreStore) on every pumpWidget(CrappyTurdApp()) below.
+  // Without a mocked platform channel, that call throws
+  // MissingPluginException under flutter_test -- setMockInitialValues
+  // installs the in-memory mock backend setup requires before the first
+  // real getInstance() call.
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('app boots to the game screen', (tester) async {
     await tester.pumpWidget(const CrappyTurdApp());
     expect(find.byType(GameScreen), findsOneWidget);
