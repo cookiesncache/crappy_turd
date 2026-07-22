@@ -44,7 +44,15 @@ class CrappyTurdApp extends StatelessWidget {
 /// the best score across all runs, persisted across app restarts via
 /// [HighScoreStore].
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({super.key, this.pipeField});
+
+  /// An optional pre-seeded [PipeField] override, used by tests that need
+  /// deterministic pipe-gap placement (e.g. to reliably drive the turd
+  /// through a real gap and score a genuine point, rather than depending on
+  /// random chance). Left null for real gameplay -- see
+  /// [_GameScreenState.initState], which creates a fresh unseeded field
+  /// instead whenever this is null.
+  final PipeField? pipeField;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -52,7 +60,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final Turd _turd = Turd();
-  final PipeField _pipeField = PipeField();
+  late final PipeField _pipeField;
   final CloudField _cloudField = CloudField();
   final ParticleField _particleField = ParticleField();
   final TrailField _trailField = TrailField();
@@ -92,6 +100,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _pipeField = widget.pipeField ?? PipeField();
     _ticker = createTicker(_onTick);
     unawaited(_ticker.start());
     _shakeController = AnimationController(
