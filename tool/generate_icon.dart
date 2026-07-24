@@ -147,9 +147,12 @@ Future<Uint8List> _renderTurdPng({
 
   // paintTurd expects to be called with the canvas already translated so
   // its local (0, 0) origin sits at the artwork's centre -- exactly what
-  // the live game does each frame before calling it.
+  // the live game does each frame before calling it. The icon canvas is
+  // square (canvasSize x canvasSize), so passing turdSize for both the
+  // width and height scale renders the same undistorted mascot as before
+  // paintTurd's two scale axes were decoupled.
   canvas.translate(canvasSize / 2, canvasSize / 2);
-  paintTurd(canvas, turdSize);
+  paintTurd(canvas, turdSize, turdSize);
 
   final picture = recorder.endRecording();
   final image = await picture.toImage(canvasSize.round(), canvasSize.round());

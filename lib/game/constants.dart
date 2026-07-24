@@ -10,6 +10,37 @@ abstract final class GameConstants {
   /// Turd height as a fraction of screen height.
   static const double turdSize = 0.13;
 
+  /// Turd width as a fraction of screen WIDTH -- paired with [turdSize]
+  /// (which stays a fraction of screen HEIGHT), so the turd's rendered
+  /// width now genuinely scales with screen width instead of being
+  /// re-derived from screen height, matching how `_PipeGeometry` in
+  /// pipe_painter.dart already scales `pipeWidth` from `size.width` while
+  /// the gap uses `size.height`.
+  ///
+  /// Before this constant existed, both axes of the turd's silhouette were
+  /// driven by the single `turdSize * size.height` scalar, so on a
+  /// narrow/tall viewport the turd's silhouette rendered disproportionately
+  /// WIDE relative to the screen's actual width (and to the pipe's own,
+  /// correctly width-scaled, gap) -- making the game measurably harder
+  /// purely as a function of aspect ratio, not player skill (and easier on
+  /// a wide/short viewport, where the opposite happened). See
+  /// turd_painter.dart and lib/game/collision.dart.
+  ///
+  /// Calibrated so behaviour at the established reference viewport used
+  /// throughout test/collision_test.dart, `Size(400, 800)` (width/height
+  /// aspect ratio 0.5), is UNCHANGED from before this fix -- i.e. this
+  /// width-based scale equals the old height-based scale AT THAT SPECIFIC
+  /// RATIO:
+  ///   turdWidthFraction * 400 == turdSize * 800
+  ///   turdWidthFraction        == 0.13 * (800 / 400)
+  ///                            == 0.13 * 2
+  ///                            == 0.26
+  /// This preserves the current tuned feel and every existing pixel-exact
+  /// collision_test.dart expectation at that reference viewport, while
+  /// fixing the actual bug: width no longer drifts with height as aspect
+  /// ratio changes away from it.
+  static const double turdWidthFraction = 0.26;
+
   /// The turd's fixed horizontal position (fraction of screen width).
   static const double turdX = 0.30;
 
