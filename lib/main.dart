@@ -4,12 +4,15 @@ import 'dart:math' as math;
 import 'package:crappy_turd/game/cloud_field.dart';
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/game/day_night.dart';
 import 'package:crappy_turd/game/game_status.dart';
 import 'package:crappy_turd/game/high_score_store.dart';
 import 'package:crappy_turd/game/particle_field.dart';
 import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/game/scoring.dart';
+import 'package:crappy_turd/game/shooting_star_field.dart';
 import 'package:crappy_turd/game/sound_manager.dart';
+import 'package:crappy_turd/game/star_field.dart';
 import 'package:crappy_turd/game/trail_field.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/game_painter.dart';
@@ -64,6 +67,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final CloudField _cloudField = CloudField();
   final ParticleField _particleField = ParticleField();
   final TrailField _trailField = TrailField();
+
+  /// Fixed background star field. Purely ambient and session-long, exactly
+  /// like [_cloudField] -- never reset on restart (see
+  /// `lib/game/star_field.dart`).
+  final StarField _starField = StarField();
+
+  /// Live shooting stars and their spawn timer. Also session-long and never
+  /// reset on restart -- an in-flight shooting star, or the countdown to
+  /// the next one, has no reason to care which run is currently underway
+  /// (see `lib/game/shooting_star_field.dart`).
+  final ShootingStarField _shootingStarField = ShootingStarField();
   final SoundManager _soundManager = SoundManager();
   final HighScoreStore _highScoreStore = HighScoreStore();
   late final Ticker _ticker;
@@ -80,6 +94,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   /// The current run's live score (pipes passed since the last restart).
   int _score = 0;
+
+  /// Seconds of continuous play in the current run, driving the looping
+  /// day/night sky via [dayNightT] (see [_dayNightT] and
+  /// [GameConstants.dayNightCycleDuration]). Purely cosmetic -- only ever
+  /// incremented in the [GameStatus.playing] branch of [_onTick], so it
+  /// naturally freezes at whatever value it reached the instant a run
+  /// ends, same as everything else on the frozen game-over scene, and
+  /// resets to 0 on restart alongside [_score].
+  double _playTime = 0;
+
+  /// The current day/night amount (`0.0` = day, `1.0` = peak night),
+  /// derived from [_playTime] via the looping [dayNightT] wave function --
+  /// the single source of truth for that math, reused here (for the
+  /// shooting-star field's spawn gate) and in [build] (for the painter)
+  /// rather than duplicated inline in either place.
+  double get _dayNightT =>
+      dayNightT(_playTime, GameConstants.dayNightCycleDuration);
 
   /// The best score ever recorded, persisted across app restarts via
   /// [_highScoreStore]. Starts at 0 and is overwritten once [_loadBest]'s
@@ -153,12 +184,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _cloudField.update(dt);
       _particleField.update(dt);
       _trailField.update(dt);
+      // Shooting stars only ever spawn NEW while the sky is dark enough
+      // (see GameConstants.shootingStarVisibilityThreshold), but -- like
+      // the ambient fields above -- always keep ageing/moving/getting
+      // culled regardless of GameStatus, hence living in this
+      // unconditional block rather than inside the `playing` case below.
+      _shootingStarField.update(dt, _dayNightT);
       switch (_status) {
         case GameStatus.title:
           final t = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
           _turd.hover(t);
         case GameStatus.playing:
           _turd.update(dt);
+          _playTime += dt;
           // Sample the motion trail only while actually playing -- a
           // frozen or hovering turd shouldn't leave a trail.
           _trailField.sample(_turd.y, _turd.tilt);
@@ -213,6 +251,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         // The best score is NOT reset here -- it persists for the lifetime
         // of the running app, across as many runs as the player takes.
         _score = 0;
+        _playTime = 0;
       }
       _status = GameStatus.playing;
       _flap();
@@ -298,6 +337,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   clouds: _cloudField.clouds,
                   trailSamples: _trailField.samples,
                   particles: _particleField.particles,
+                  stars: _starField.stars,
+                  shootingStars: _shootingStarField.shootingStars,
+                  dayNightT: _dayNightT,
+                  playTime: _playTime,
                 ),
               ),
             ),

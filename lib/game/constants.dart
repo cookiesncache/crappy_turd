@@ -162,4 +162,142 @@ abstract final class GameConstants {
   /// near-identical, overlapping ghosts that read as a blur rather than a
   /// few distinct echoes.
   static const double trailSampleInterval = 0.045;
+
+  // --- M9: day/night background ---
+
+  /// Seconds of continuous play for the sky to shift from day to peak
+  /// night, ONE-WAY (see `_GameScreenState._playTime` in main.dart and the
+  /// looping triangle wave in `lib/game/day_night.dart`). The sky doesn't
+  /// stop at peak night -- it shifts back to day over the next
+  /// [dayNightCycleDuration] seconds and repeats indefinitely, so a full
+  /// day->night->day loop takes `2 * dayNightCycleDuration` seconds. This
+  /// constant is deliberately the one-way duration, not the round-trip
+  /// period -- don't redefine it as the latter. Purely cosmetic -- doesn't
+  /// affect physics, pipes, or scoring. Resets to day on every restart, and
+  /// freezes wherever it was the moment a run ends, same as everything else
+  /// on the frozen game-over scene.
+  static const double dayNightCycleDuration = 45;
+
+  /// Day/night amount (see `lib/game/day_night.dart`) above which the
+  /// rainbow is fully faded out, as a fraction of the way to peak night --
+  /// chosen well below `1.0` so the rainbow fades out quickly at the start
+  /// of dusk and, symmetrically (since it's applied to `dayNightT` itself,
+  /// which rises then falls), doesn't fade back in until deep into the
+  /// return leg toward day -- rather than lingering faintly visible against
+  /// an already-darkening sky the whole way through.
+  static const double rainbowFadeThreshold = 0.3;
+
+  // Twinkling stars (see lib/models/star.dart, lib/game/star_field.dart).
+
+  /// Number of stars in the fixed background star field -- enough to read
+  /// as a starry night sky without looking cluttered against the rainbow
+  /// and pipes.
+  static const int starCount = 40;
+
+  /// Highest a star may spawn (fraction of screen height) -- near the very
+  /// top of the sky.
+  static const double starMinY = 0.04;
+
+  /// Lowest a star may spawn (fraction of screen height) -- close to
+  /// `GameConstants.groundY`, so stars disperse evenly all the way down
+  /// toward the horizon instead of stopping at an arbitrary cutoff partway
+  /// down the sky. Safe to extend this close to the ground now that stars
+  /// and the rainbow never overlap in time (see [starVisibilityThreshold]
+  /// vs [rainbowFadeThreshold]): by the time stars are visible at all, the
+  /// rainbow has already fully faded out.
+  static const double starMaxY = 0.78;
+
+  /// Smallest a star's render-size hint may be (fraction of screen width) --
+  /// its RESTING size before the twinkle size-pulse (see
+  /// [starTwinkleMinScale]/[starTwinkleMaxScale]) scales it up or down.
+  static const double starMinSize = 0.0015;
+
+  /// Largest a star's render-size hint may be (fraction of screen width).
+  static const double starMaxSize = 0.0035;
+
+  /// Slowest a star's twinkle oscillation may run (radians/sec) -- a full
+  /// brighten-dim cycle takes roughly 21 seconds at this, the slowest end
+  /// of the range, for a gentle, unhurried shimmer rather than a lively
+  /// fast twinkle.
+  static const double starTwinkleSpeedMin = 0.3;
+
+  /// Fastest a star's twinkle oscillation may run (radians/sec) -- paired
+  /// with [starTwinkleSpeedMin] and each star's own random phase offset
+  /// (`Star.twinklePhase`) so a whole field of stars never brighten/dim in
+  /// lockstep. Even at this, the fastest end of the range, a full cycle
+  /// still takes over 6 seconds.
+  static const double starTwinkleSpeedMax = 1;
+
+  /// Smallest a star's SIZE multiplier gets at the dimmest point of its
+  /// twinkle (relative to its own resting [starMinSize]/[starMaxSize]) --
+  /// paired with [starTwinkleMaxScale] so a star doesn't just dim while
+  /// twinkling, it visibly shrinks too.
+  static const double starTwinkleMinScale = 0.5;
+
+  /// Largest a star's SIZE multiplier gets at the brightest point of its
+  /// twinkle -- deliberately above `1.0` so a star visibly GROWS past its
+  /// own resting size at peak brightness, not merely back to it.
+  static const double starTwinkleMaxScale = 1.4;
+
+  /// Day/night amount (see `lib/game/day_night.dart`) below which the star
+  /// field is fully invisible, as a fraction of the way to peak night --
+  /// chosen so stars don't start fading in until dusk is already
+  /// well-progressed, and (symmetrically, since it's applied to `dayNightT`
+  /// itself) fade back out again as soon as the return leg toward day
+  /// passes the same point, rather than lingering visible for most of the
+  /// trip back. Shares its value with [shootingStarVisibilityThreshold] on
+  /// purpose: shooting stars streaking across a sky with no visible
+  /// background stars yet would look wrong, so the two fade in together.
+  static const double starVisibilityThreshold = 0.5;
+
+  // Shooting stars (see lib/models/shooting_star.dart,
+  // lib/game/shooting_star_field.dart).
+
+  /// Shortest gap (seconds) before a new shooting star may spawn. The
+  /// actual next-spawn delay is re-randomised within this..
+  /// [shootingStarIntervalMax] every time one actually spawns, rather than
+  /// ticking on a fixed period, so shooting stars read as occasional and
+  /// organic instead of metronomic.
+  static const double shootingStarIntervalMin = 4;
+
+  /// Longest gap (seconds) before a new shooting star may spawn.
+  static const double shootingStarIntervalMax = 12;
+
+  /// How fast a shooting star streaks across the sky, in screen-widths per
+  /// second -- much faster than [cloudSpeed] or [pipeSpeed] since it should
+  /// read as a quick, eye-catching streak rather than a slow drift. Fast
+  /// enough that, combined with [shootingStarLife], a streak crosses very
+  /// nearly the whole screen before it dies rather than fading out
+  /// partway across.
+  static const double shootingStarSpeed = 1.4;
+
+  /// Length of a shooting star's fading trail, as a fraction of screen
+  /// width -- long enough to read clearly as a bold streak rather than a
+  /// short dash, short enough to stay a brief flourish rather than a line
+  /// across the whole sky.
+  static const double shootingStarStreakLength = 0.18;
+
+  /// Stroke width of a shooting star's trail, as a fraction of screen
+  /// width -- thick enough to read as a bold, eye-catching streak rather
+  /// than a thin scratch.
+  static const double shootingStarStrokeWidth = 0.005;
+
+  /// How long a shooting star stays alive after spawning, in seconds --
+  /// short, since it's meant to read as a quick streak, not a lingering
+  /// object.
+  static const double shootingStarLife = 0.8;
+
+  /// Minimum day/night amount (see `lib/game/day_night.dart` --
+  /// `0.0` = day, `1.0` = peak night) required for a NEW shooting star to
+  /// spawn. Chosen as "at least half-way toward night": a shooting star
+  /// streaking across a still-bright blue day sky would read as a visual
+  /// bug rather than a feature, so streaks are held back until the sky has
+  /// visibly darkened toward twilight. This threshold only gates NEW
+  /// spawns -- a shooting star already in flight keeps moving/ageing/
+  /// getting culled on its own schedule even if the cycle dips back below
+  /// this threshold before it finishes (see `ShootingStarField.update`).
+  /// Deliberately the same value as [starVisibilityThreshold], so shooting
+  /// stars never appear before the background star field itself has
+  /// started fading in.
+  static const double shootingStarVisibilityThreshold = 0.5;
 }

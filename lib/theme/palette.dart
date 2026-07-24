@@ -6,6 +6,14 @@ abstract final class Palette {
   static const Color skyTop = Color(0xFF74C7F2);
   static const Color skyBottom = Color(0xFFC8EEFB);
 
+  // Night sky -- a run gradually shifts toward these and back again on a
+  // repeating loop (see GameConstants.dayNightCycleDuration and
+  // lib/game/day_night.dart), a soft twilight indigo rather than a scary
+  // black, keeping the same "lighter toward the horizon" gradient shape as
+  // the day sky above.
+  static const Color nightSkyTop = Color(0xFF1A2A5E);
+  static const Color nightSkyBottom = Color(0xFF4A5FA0);
+
   // Rainbow bands (outer red -> inner violet).
   static const List<Color> rainbow = [
     Color(0xFFFF6B6B),
@@ -54,4 +62,10 @@ abstract final class Palette {
   // Bright twinkle tones for the flap "sparkle" particle burst -- warm
   // gold and pale white-gold, alternated per-particle for a glinting look.
   static const Color sparkleWhite = Color(0xFFFFF9E6);
+
+  // A soft, pale, faintly-blue white used for both the twinkling
+  // background stars and shooting-star streaks (see lib/models/star.dart,
+  // lib/models/shooting_star.dart) -- bright enough to read clearly
+  // against the indigo night sky without looking harsh.
+  static const Color star = Color(0xFFF0F4FF);
 }
