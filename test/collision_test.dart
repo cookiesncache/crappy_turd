@@ -335,12 +335,12 @@ void main() {
           const size = Size(300, 900);
           final heightScale = GameConstants.turdSize * size.height; // 117
           final correctHalfWidth =
-              GameConstants.turdWidthFraction * size.width * 0.48; // 37.44
+              GameConstants.turdWidthFraction * size.width * 0.48; // 28.8
           final buggyHalfWidth = heightScale * 0.48; // 56.16
-          // Comfortably between the two (9.56 clear of the correct edge,
-          // 9.16 inside the buggy one) -- well past pipe_painter.dart's
+          // Comfortably between the two (11.2 clear of the correct edge,
+          // 16.16 inside the buggy one) -- well past pipe_painter.dart's
           // corner radius (pipeWidth * 0.12 = 5.04px here) at either end.
-          const offset = 47.0;
+          const offset = 40.0;
           expect(correctHalfWidth, lessThan(offset));
           expect(buggyHalfWidth, greaterThan(offset));
 
@@ -358,8 +358,8 @@ void main() {
             turdCollidesWithPipe(turd, pipe, size),
             isFalse,
             reason:
-                'the correctly width-scaled turd (half-width 37.44) does '
-                'not reach a pipe 47px away; the old buggy formula '
+                'the correctly width-scaled turd (half-width 28.8) does '
+                'not reach a pipe 40px away; the old buggy formula '
                 '(half-width 56.16) would have',
           );
         },
@@ -370,15 +370,23 @@ void main() {
         'width collides -- the old height-derived width would have '
         'incorrectly cleared it',
         () {
-          const size = Size(600, 700);
-          final heightScale = GameConstants.turdSize * size.height; // 91
+          // A more extreme wide/short ratio than the narrow/tall case above
+          // needs, purely because turdWidthFraction is smaller now (tuned
+          // down after live feedback -- see its doc comment) than when
+          // these tests were first written: the gap between the old
+          // (height-derived) and new (width-derived) half-widths shrinks
+          // as turdWidthFraction shrinks, so Size(600, 700) no longer left
+          // enough margin past the corner radius to be robust. Size(800,
+          // 500) restores a comfortable gap.
+          const size = Size(800, 500);
+          final heightScale = GameConstants.turdSize * size.height; // 65
           final correctHalfWidth =
-              GameConstants.turdWidthFraction * size.width * 0.48; // 74.88
-          final buggyHalfWidth = heightScale * 0.48; // 43.68
-          // Comfortably between the two (15.88 inside the correct edge,
-          // 15.32 clear of the buggy one) -- well past pipe_painter.dart's
-          // corner radius (pipeWidth * 0.12 = 10.08px here) at either end.
-          const offset = 59.0;
+              GameConstants.turdWidthFraction * size.width * 0.48; // 76.8
+          final buggyHalfWidth = heightScale * 0.48; // 31.2
+          // Comfortably between the two (22.8 clear on each side) -- well
+          // past pipe_painter.dart's corner radius
+          // (pipeWidth * 0.12 = 13.44px here).
+          const offset = 54.0;
           expect(correctHalfWidth, greaterThan(offset));
           expect(buggyHalfWidth, lessThan(offset));
 
@@ -396,9 +404,9 @@ void main() {
             turdCollidesWithPipe(turd, pipe, size),
             isTrue,
             reason:
-                'the correctly width-scaled turd (half-width 74.88) '
-                'reaches a pipe 59px away; the old buggy formula '
-                '(half-width 43.68) would have missed it entirely',
+                'the correctly width-scaled turd (half-width 76.8) '
+                'reaches a pipe 54px away; the old buggy formula '
+                '(half-width 31.2) would have missed it entirely',
           );
         },
       );

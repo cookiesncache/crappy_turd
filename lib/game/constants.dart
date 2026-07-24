@@ -26,20 +26,26 @@ abstract final class GameConstants {
   /// a wide/short viewport, where the opposite happened). See
   /// turd_painter.dart and lib/game/collision.dart.
   ///
-  /// Calibrated so behaviour at the established reference viewport used
-  /// throughout test/collision_test.dart, `Size(400, 800)` (width/height
-  /// aspect ratio 0.5), is UNCHANGED from before this fix -- i.e. this
-  /// width-based scale equals the old height-based scale AT THAT SPECIFIC
-  /// RATIO:
-  ///   turdWidthFraction * 400 == turdSize * 800
-  ///   turdWidthFraction        == 0.13 * (800 / 400)
-  ///                            == 0.13 * 2
-  ///                            == 0.26
-  /// This preserves the current tuned feel and every existing pixel-exact
-  /// collision_test.dart expectation at that reference viewport, while
-  /// fixing the actual bug: width no longer drifts with height as aspect
-  /// ratio changes away from it.
-  static const double turdWidthFraction = 0.26;
+  /// Was originally calibrated to exactly preserve pre-fix behaviour at
+  /// `Size(400, 800)` (0.26 -- see git history), the aspect ratio
+  /// test/collision_test.dart happened to already use. That reference
+  /// turned out to be a poor proxy for how this game actually gets
+  /// played/tested day to day: on a much wider desktop testing viewport,
+  /// preserving the 400x800 reference made the turd's width nearly double
+  /// (and the game noticeably harder) relative to what testing had always
+  /// felt like, since the old bug had been making it artificially narrow
+  /// there the whole time.
+  ///
+  /// Re-tuned by direct feel after that fix landed, rather than solving
+  /// for exact equality at any one reference viewport. Also deliberately
+  /// NOT pushed all the way down to fully match old desktop-viewport feel,
+  /// since [turdWidthFraction] also governs the turd's visual width:height
+  /// PROPORTIONS, not just hitbox difficulty -- going that far would make
+  /// the mascot look noticeably thin/elongated on an actual narrow phone
+  /// viewport, where width and height scale are meant to stay reasonably
+  /// close (see [turdSize]). This value is a deliberate middle ground;
+  /// expect it to keep moving as real playtesting feedback comes in.
+  static const double turdWidthFraction = 0.20;
 
   /// The turd's fixed horizontal position (fraction of screen width).
   static const double turdX = 0.30;
