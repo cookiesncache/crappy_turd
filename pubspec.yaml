@@ -39,6 +39,8 @@ dependencies:
   vector_math: ^2.2.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
   flutter_test:
     sdk: flutter
 
@@ -62,6 +64,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/audio/
+    - assets/icon/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -88,3 +91,43 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# flutter_launcher_icons config (M10 polish): generates every platform's
+# real launcher icon files from the two procedurally-rendered master PNGs
+# under assets/icon/ (see tool/generate_icon.dart for how those are made).
+# Re-run `dart run flutter_launcher_icons` after regenerating those PNGs.
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  ios: true
+  # icon.png is PNG-encoded via Image.toByteData(format: png) in
+  # tool/generate_icon.dart, which always emits an RGBA image -- even
+  # though every pixel is fully opaque, the alpha CHANNEL is still present,
+  # which the Apple App Store rejects for iOS app icons. This strips it.
+  remove_alpha_ios: true
+  web:
+    generate: true
+  windows:
+    generate: true
+  macos:
+    generate: true
+  # Android adaptive icon: a plain sky-blue backdrop (Palette.skyTop) behind
+  # the transparent-background foreground layer, which the OS
+  # crops/masks/parallaxes independently of the flat icon above.
+  adaptive_icon_background: "#74C7F2"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+
+# flutter_native_splash config (M10 polish): generates the native splash
+# screen shown while the app cold-starts, using the same sky-blue backdrop
+# and transparent-background turd artwork as the adaptive icon above (the
+# background colour already provides the backdrop, so the transparent
+# foreground image is reused here rather than the full icon.png).
+# Re-run `dart run flutter_native_splash:create` after regenerating those
+# PNGs.
+flutter_native_splash:
+  color: "#74C7F2"
+  image: assets/icon/icon_foreground.png
+  android_12:
+    image: assets/icon/icon_foreground.png
+    color: "#74C7F2"
+  web: true

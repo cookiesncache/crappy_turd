@@ -19,6 +19,7 @@ import 'package:crappy_turd/render/game_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
+import 'package:flutter/services.dart' show HapticFeedback;
 
 void main() {
   runApp(const CrappyTurdApp());
@@ -220,6 +221,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _turd.impact();
             unawaited(_shakeController.forward(from: 0));
             unawaited(_soundManager.playDeath());
+            unawaited(HapticFeedback.heavyImpact());
             if (_score > _best) {
               _best = _score;
               unawaited(_highScoreStore.save(_best));
