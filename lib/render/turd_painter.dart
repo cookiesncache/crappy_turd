@@ -6,26 +6,22 @@ import 'package:crappy_turd/theme/palette.dart';
 import 'package:flutter/material.dart';
 
 /// The four stacked "scoops" (bottom -> swirl tip) that make up the turd's
-/// silhouette, expressed relative to [widthScale] (horizontal) /
-/// [heightScale] (vertical) and centred on the local origin (0, 0).
+/// silhouette, expressed relative to [size] and centred on the local origin
+/// (0, 0).
 ///
-/// The two axes are genuinely independent -- width scales with screen
-/// WIDTH, height scales with screen HEIGHT, mirroring how `_PipeGeometry`
-/// in pipe_painter.dart already derives `pipeWidth` from `size.width` and
-/// the gap from `size.height` -- so the turd's silhouette no longer drifts
-/// wider/narrower purely as a function of the viewport's aspect ratio (see
-/// `GameConstants.turdWidthFraction`).
+/// A single scalar drives both axes on purpose: the turd's silhouette
+/// proportions must never change shape as the viewport's aspect ratio
+/// changes (see `GameConstants.turdSize`'s doc comment) -- only its overall
+/// scale, via this one number, ever varies.
 ///
 /// Shared by [turdBodyPath] (for the union silhouette) and [paintTurd]
 /// (which also needs the individual rects to draw crease arcs), so the two
 /// can never disagree about the underlying geometry.
-List<Rect> _turdScoops(double widthScale, double heightScale) {
-  final sx = widthScale;
-  final sy = heightScale;
+List<Rect> _turdScoops(double size) {
   Rect scoop(double cy, double w, double h) => Rect.fromCenter(
-    center: Offset(0, sy * cy),
-    width: sx * w,
-    height: sy * h,
+    center: Offset(0, size * cy),
+    width: size * w,
+    height: size * h,
   );
   return <Rect>[
     scoop(0.30, 0.96, 0.44),
@@ -37,32 +33,28 @@ List<Rect> _turdScoops(double widthScale, double heightScale) {
 
 /// The turd's exact painted silhouette: a boolean union of its four stacked
 /// scoops (see [_turdScoops]), in LOCAL space centred on the origin (0, 0)
-/// and sized by [widthScale] (horizontal) / [heightScale] (vertical).
+/// and sized by [size].
 ///
 /// This is the same path [paintTurd] fills/outlines, and it's also used
 /// directly for real-geometry collision detection (see
 /// `lib/game/collision.dart`) — sharing it means rendering and collision
 /// are structurally unable to drift apart.
-Path turdBodyPath(double widthScale, double heightScale) {
+Path turdBodyPath(double size) {
   var body = Path();
-  for (final r in _turdScoops(widthScale, heightScale)) {
+  for (final r in _turdScoops(size)) {
     body = Path.combine(PathOperation.union, body, Path()..addOval(r));
   }
   return body;
 }
 
 /// Paints the cute, glossy turd mascot centred on the canvas origin (0, 0),
-/// sized so its overall width/height are roughly [widthScale] /
-/// [heightScale] respectively.
+/// sized so its overall width/height are both roughly [size].
 ///
 /// The caller translates (and, from M2, rotates) the canvas before calling
 /// this, which keeps the mascot reusable for velocity-based tilt later.
-void paintTurd(Canvas canvas, double widthScale, double heightScale) {
-  final sx = widthScale;
-  final sy = heightScale;
-
-  final scoops = _turdScoops(sx, sy);
-  final body = turdBodyPath(sx, sy);
+void paintTurd(Canvas canvas, double size) {
+  final scoops = _turdScoops(size);
+  final body = turdBodyPath(size);
 
   // Fill with a soft top-to-bottom brown gradient (soft-serve look).
   final bodyPaint = Paint()
@@ -74,13 +66,11 @@ void paintTurd(Canvas canvas, double widthScale, double heightScale) {
   canvas.drawPath(body, bodyPaint);
 
   // Crease shadows: the underside arc of each upper scoop reads as a fold,
-  // giving the stack real definition between the lobes. A stroke width is
-  // a line thickness, not a horizontal/vertical extent -- tied to the
-  // height scale, the same axis the scoops' own vertical stacking uses.
+  // giving the stack real definition between the lobes.
   final crease = Paint()
     ..color = Palette.turdDark.withValues(alpha: 0.5)
     ..style = PaintingStyle.stroke
-    ..strokeWidth = sy * 0.03
+    ..strokeWidth = size * 0.03
     ..strokeCap = StrokeCap.round
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
   canvas
@@ -88,32 +78,27 @@ void paintTurd(Canvas canvas, double widthScale, double heightScale) {
     ..drawArc(scoops[2], 0, math.pi, false, crease)
     ..drawArc(scoops[3], 0, math.pi, false, crease);
 
-  // Crisp outline around the whole silhouette for extra definition. Same
-  // non-directional-stroke-width reasoning as the crease above -- tied to
-  // the height scale.
+  // Crisp outline around the whole silhouette for extra definition.
   final outline = Paint()
     ..color = Palette.turdDark.withValues(alpha: 0.6)
     ..style = PaintingStyle.stroke
-    ..strokeWidth = sy * 0.022;
+    ..strokeWidth = size * 0.022;
   canvas.drawPath(body, outline);
 
-  // Soft glossy highlight near the top-left for a shiny, cute finish. Its
-  // x-offset and width are conceptually horizontal, so they use the width
-  // scale; its y-offset and height are conceptually vertical, so they use
-  // the height scale.
+  // Soft glossy highlight near the top-left for a shiny, cute finish.
   final highlight = Paint()
     ..color = Colors.white.withValues(alpha: 0.2)
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
   canvas.drawOval(
     Rect.fromCenter(
-      center: Offset(-sx * 0.12, -sy * 0.22),
-      width: sx * 0.28,
-      height: sy * 0.15,
+      center: Offset(-size * 0.12, -size * 0.22),
+      width: size * 0.28,
+      height: size * 0.15,
     ),
     highlight,
   );
 
-  _paintFace(canvas, sx, sy);
+  _paintFace(canvas, size);
 }
 
 /// Paints a fading motion-trail of past turd silhouettes: flat,
@@ -123,9 +108,8 @@ void paintTurd(Canvas canvas, double widthScale, double heightScale) {
 /// silhouette [paintTurd] fills, just rendered as a flat fading shadow
 /// instead of the full glossy render.
 void paintTurdTrail(Canvas canvas, Size size, List<TrailSample> samples) {
-  final widthScale = size.width * GameConstants.turdWidthFraction;
-  final heightScale = size.height * GameConstants.turdSize;
-  final body = turdBodyPath(widthScale, heightScale);
+  final turdSize = size.height * GameConstants.turdSize;
+  final body = turdBodyPath(turdSize);
   // A cap on how opaque even the very newest ghost gets, so the trail
   // always reads as a subtle wisp behind the turd rather than a second
   // solid copy of it. Feel-tunable. Lowered after feedback that the
@@ -145,14 +129,11 @@ void paintTurdTrail(Canvas canvas, Size size, List<TrailSample> samples) {
   }
 }
 
-void _paintFace(Canvas canvas, double widthScale, double heightScale) {
-  final sx = widthScale;
-  final sy = heightScale;
-
-  final eyeY = -sy * 0.15;
-  final eyeDx = sx * 0.15;
-  final eyeR = sy * 0.11;
-  final pupilR = sy * 0.055;
+void _paintFace(Canvas canvas, double size) {
+  final eyeY = -size * 0.15;
+  final eyeDx = size * 0.15;
+  final eyeR = size * 0.11;
+  final pupilR = size * 0.055;
 
   final white = Paint()..color = Palette.eyeWhite;
   final pupil = Paint()..color = Palette.pupil;
@@ -161,7 +142,7 @@ void _paintFace(Canvas canvas, double widthScale, double heightScale) {
   for (final dx in [-eyeDx, eyeDx]) {
     canvas
       ..drawCircle(Offset(dx, eyeY), eyeR, white)
-      ..drawCircle(Offset(dx, eyeY + sy * 0.015), pupilR, pupil)
+      ..drawCircle(Offset(dx, eyeY + size * 0.015), pupilR, pupil)
       ..drawCircle(
         Offset(dx - pupilR * 0.4, eyeY - pupilR * 0.4),
         pupilR * 0.35,
@@ -172,17 +153,17 @@ void _paintFace(Canvas canvas, double widthScale, double heightScale) {
   // Rosy cheeks.
   final cheek = Paint()..color = Palette.cheek;
   canvas
-    ..drawCircle(Offset(-sx * 0.27, eyeY + sy * 0.13), sy * 0.07, cheek)
-    ..drawCircle(Offset(sx * 0.27, eyeY + sy * 0.13), sy * 0.07, cheek);
+    ..drawCircle(Offset(-size * 0.27, eyeY + size * 0.13), size * 0.07, cheek)
+    ..drawCircle(Offset(size * 0.27, eyeY + size * 0.13), size * 0.07, cheek);
 
   // Happy smile.
   final smile = Path()
-    ..moveTo(-sx * 0.13, eyeY + sy * 0.15)
-    ..quadraticBezierTo(0, eyeY + sy * 0.30, sx * 0.13, eyeY + sy * 0.15);
+    ..moveTo(-size * 0.13, eyeY + size * 0.15)
+    ..quadraticBezierTo(0, eyeY + size * 0.30, size * 0.13, eyeY + size * 0.15);
   final smilePaint = Paint()
     ..color = Palette.mouth
     ..style = PaintingStyle.stroke
-    ..strokeWidth = sy * 0.035
+    ..strokeWidth = size * 0.035
     ..strokeCap = StrokeCap.round;
   canvas.drawPath(smile, smilePaint);
 }

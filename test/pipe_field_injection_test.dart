@@ -7,6 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// gapCenterY (the only thing this test actually predicts -- see below)
+/// never depends on the canvas size, so this placeholder is just to
+/// satisfy Pipe.spawn's now-required Size parameter, matching
+/// test/collision_test.dart's convention.
+const testSize = Size(400, 800);
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -25,7 +31,10 @@ void main() {
         // math.Random(seed) is deterministic, this predicts exactly what
         // the running game's first spawned pipe's gap will be, without
         // needing to guess or hardcode a magic float.
-        final expectedGapCenterY = Pipe.spawn(math.Random(seed)).gapCenterY;
+        final expectedGapCenterY = Pipe.spawn(
+          testSize,
+          math.Random(seed),
+        ).gapCenterY;
 
         final injected = PipeField(math.Random(seed));
         await tester.pumpWidget(
@@ -41,7 +50,7 @@ void main() {
         await tester.tap(find.byType(GameScreen));
         await tester.pump();
 
-        // GameConstants.spawnInterval is 1.7s, but an unbroken freefall
+        // GameConstants.spawnInterval is 2.1s, but an unbroken freefall
         // after a single flap hits the ground in well under that -- so
         // stay aloft with periodic re-flaps (mirroring real play) for long
         // enough that the spawn timer actually crosses the interval before

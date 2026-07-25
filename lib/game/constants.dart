@@ -7,45 +7,26 @@ abstract final class GameConstants {
   /// Fraction of screen height where the ground begins.
   static const double groundY = 0.82;
 
-  /// Turd height as a fraction of screen height.
-  static const double turdSize = 0.13;
-
-  /// Turd width as a fraction of screen WIDTH -- paired with [turdSize]
-  /// (which stays a fraction of screen HEIGHT), so the turd's rendered
-  /// width now genuinely scales with screen width instead of being
-  /// re-derived from screen height, matching how `_PipeGeometry` in
-  /// pipe_painter.dart already scales `pipeWidth` from `size.width` while
-  /// the gap uses `size.height`.
+  /// The turd's one and only size scale: a fraction of screen HEIGHT, used
+  /// for BOTH the width and height of its rendered/collision silhouette
+  /// (see `turdBodyPath`/`paintTurd` in lib/render/turd_painter.dart) --
+  /// deliberately a single scalar, so the mascot's own silhouette
+  /// proportions never change shape as the viewport's aspect ratio changes.
   ///
-  /// Before this constant existed, both axes of the turd's silhouette were
-  /// driven by the single `turdSize * size.height` scalar, so on a
-  /// narrow/tall viewport the turd's silhouette rendered disproportionately
-  /// WIDE relative to the screen's actual width (and to the pipe's own,
-  /// correctly width-scaled, gap) -- making the game measurably harder
-  /// purely as a function of aspect ratio, not player skill (and easier on
-  /// a wide/short viewport, where the opposite happened). See
-  /// turd_painter.dart and lib/game/collision.dart.
-  ///
-  /// Was originally calibrated to exactly preserve pre-fix behaviour at
-  /// `Size(400, 800)` (0.26 -- see git history), the aspect ratio
-  /// test/collision_test.dart happened to already use. That reference
-  /// turned out to be a poor proxy for how this game actually gets
-  /// played/tested day to day: on a much wider desktop testing viewport,
-  /// preserving the 400x800 reference made the turd's width nearly double
-  /// (and the game noticeably harder) relative to what testing had always
-  /// felt like, since the old bug had been making it artificially narrow
-  /// there the whole time.
-  ///
-  /// Re-tuned by direct feel after that fix landed, rather than solving
-  /// for exact equality at any one reference viewport. Also deliberately
-  /// NOT pushed all the way down to fully match old desktop-viewport feel,
-  /// since [turdWidthFraction] also governs the turd's visual width:height
-  /// PROPORTIONS, not just hitbox difficulty -- going that far would make
-  /// the mascot look noticeably thin/elongated on an actual narrow phone
-  /// viewport, where width and height scale are meant to stay reasonably
-  /// close (see [turdSize]). This value is a deliberate middle ground;
-  /// expect it to keep moving as real playtesting feedback comes in.
-  static const double turdWidthFraction = 0.20;
+  /// (An earlier revision split this into two independent scales --
+  /// screen-height-based `turdSize` for the vertical axis plus a new
+  /// screen-width-based `turdWidthFraction` for the horizontal one -- to
+  /// fix a genuine "difficulty varies by screen shape" bug. That approach
+  /// worked for difficulty, but as a side effect made the turd's own look
+  /// change proportions across viewports (reading noticeably "too skinny"
+  /// at some aspect ratios once tuned), which was unacceptable -- the
+  /// character's silhouette must be constant everywhere. This reverts to
+  /// the original single-scalar design and moves the aspect-ratio fix onto
+  /// the PIPE side instead -- see [pipeWidth], [pipeSpeed], and
+  /// [pipeSpawnMargin], all now defined relative to this SAME screen-height
+  /// axis, so their relationship to the turd's fixed size never drifts
+  /// with aspect ratio.)
+  static const double turdSize = 0.115;
 
   /// The turd's fixed horizontal position (fraction of screen width).
   static const double turdX = 0.30;
@@ -69,8 +50,20 @@ abstract final class GameConstants {
   /// Angular speed (radians/sec) of the title-screen bob.
   static const double bobSpeed = 2.4;
 
-  /// Pipe width as a fraction of screen width.
-  static const double pipeWidth = 0.14;
+  /// Pipe width, as a fraction of screen HEIGHT -- not width. Deliberately
+  /// tied to the same axis [turdSize] uses (rather than screen width) so
+  /// the turd's fixed pixel size and the pipe's pixel width scale in
+  /// lockstep regardless of aspect ratio: their ratio, and therefore how
+  /// much of the gap the turd's fixed body actually occupies, never drifts
+  /// as width and height diverge from each other. See [turdSize]'s doc
+  /// comment for the full history.
+  ///
+  /// Recalibrated to preserve the exact pixel width this constant produced
+  /// at the project's established reference viewport, `Size(400, 800)`,
+  /// back when it was still width-based:
+  ///   old: 0.14 (width-fraction) * 400 (width)  = 56px
+  ///   new: pipeWidth * 800 (height) = 56px  =>  pipeWidth = 56 / 800 = 0.07
+  static const double pipeWidth = 0.08;
 
   /// Vertical gap a pipe leaves for the turd to fly through (fraction of
   /// screen height).
@@ -80,15 +73,42 @@ abstract final class GameConstants {
   /// (fraction of screen height).
   static const double gapMargin = 0.05;
 
-  /// Pipe scroll speed, in screen-widths per second (leftward).
-  static const double pipeSpeed = 0.35;
+  /// Pipe scroll speed, in screen-HEIGHTS per second (leftward) -- not
+  /// screen-widths. Tied to the same axis as [turdSize]/[pipeWidth], for
+  /// the same aspect-ratio-independence reason: how much horizontal
+  /// clearance/reaction time the turd's fixed size gets before a pipe
+  /// reaches it never drifts with aspect ratio.
+  ///
+  /// Recalibrated to preserve the exact pixel speed this constant produced
+  /// at the `Size(400, 800)` reference viewport, back when it was
+  /// width-based:
+  ///   old: 0.35 (width-fraction/sec) * 400 (width)  = 140px/sec
+  ///   new: pipeSpeed * 800 (height) = 140px/sec  =>  pipeSpeed = 140 / 800
+  ///        = 0.175
+  static const double pipeSpeed = 0.175;
 
-  /// Seconds between pipe spawns.
-  static const double spawnInterval = 1.7;
+  /// Seconds between pipe spawns. Widening this (rather than [pipeSpeed])
+  /// spaces consecutive pipes further apart without changing how fast a
+  /// pipe closes in once it's on screen -- the two feel different even
+  /// though both affect "difficulty".
+  static const double spawnInterval = 2.1;
 
-  /// Starting x for a newly spawned pipe, just off the right edge (fraction
-  /// of screen width).
-  static const double pipeSpawnX = 1.15;
+  /// How far past the right edge a newly spawned pipe starts, as a fraction
+  /// of screen HEIGHT -- the same unit `Pipe.x` is now expressed in (see
+  /// lib/models/pipe.dart). Replaces the old fixed `pipeSpawnX`: once `x`
+  /// is height-normalized, the right edge itself is no longer a fixed x
+  /// value (it's `size.width / size.height`, which varies with aspect
+  /// ratio), so `Pipe.spawn` adds this margin to that dynamic edge position
+  /// rather than using one fixed constant for both.
+  ///
+  /// Recalibrated to preserve the exact pixel margin the old system
+  /// produced at the `Size(400, 800)` reference viewport, where the right
+  /// edge sat at exactly x = 1.0 (width-fraction):
+  ///   old: pipeSpawnX (1.15) - 1.0 (right edge) = 0.15 (width-fraction)
+  ///        0.15 * 400 (width) = 60px
+  ///   new: pipeSpawnMargin * 800 (height) = 60px
+  ///        => pipeSpawnMargin = 60 / 800 = 0.075
+  static const double pipeSpawnMargin = 0.075;
 
   /// How long the title/game-over overlays take to cross-fade when the
   /// `AnimatedSwitcher` driving them swaps its child (e.g. title ->

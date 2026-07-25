@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show Size;
 
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/models/pipe.dart';
@@ -19,7 +20,11 @@ class PipeField {
 
   /// Advance all pipes by [dt] seconds, cull offscreen ones, and spawn new
   /// pipes as the spawn timer crosses [GameConstants.spawnInterval].
-  void update(double dt) {
+  ///
+  /// [size] is the real canvas size, needed by [Pipe.spawn] to compute the
+  /// (now height-normalized, aspect-ratio-dependent) dynamic spawn
+  /// position.
+  void update(double dt, Size size) {
     for (final p in pipes) {
       p.update(dt);
     }
@@ -31,8 +36,8 @@ class PipeField {
       // Advance the new pipe by the time elapsed since its spawn instant
       // within this frame, so pipes spawned in the same update() call (a
       // long dt) land at distinct, correctly staggered positions instead
-      // of overlapping at pipeSpawnX.
-      final pipe = Pipe.spawn(_random)..update(_spawnTimer);
+      // of overlapping at the same spawn x.
+      final pipe = Pipe.spawn(size, _random)..update(_spawnTimer);
       pipes.add(pipe);
     }
   }

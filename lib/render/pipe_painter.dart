@@ -24,8 +24,8 @@ void paintPipes(Canvas canvas, Size size, List<Pipe> pipes) {
 /// independently-written ones that merely happen to agree today.
 class _PipeGeometry {
   _PipeGeometry(Pipe pipe, Size size)
-    : left = pipe.x * size.width,
-      pipeWidth = GameConstants.pipeWidth * size.width,
+    : left = pipe.x * size.height,
+      pipeWidth = GameConstants.pipeWidth * size.height,
       gapTop = (pipe.gapCenterY - GameConstants.gapHeight / 2) * size.height,
       gapBottom = (pipe.gapCenterY + GameConstants.gapHeight / 2) * size.height,
       groundTop = size.height * GameConstants.groundY;

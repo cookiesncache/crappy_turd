@@ -201,11 +201,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Sample the motion trail only while actually playing -- a
           // frozen or hovering turd shouldn't leave a trail.
           _trailField.sample(_turd.y, _turd.tilt);
-          _pipeField.update(dt);
+          _pipeField.update(dt, _size);
           // Scoring and dying are independent per-frame events; tally any
           // pipes the turd has newly flown past before checking whether
           // this frame is also the one where it dies.
-          final passedThisTick = countPipesPassed(_pipeField.pipes);
+          final passedThisTick = countPipesPassed(_pipeField.pipes, _size);
           if (passedThisTick > 0) {
             unawaited(_soundManager.playScore());
           }

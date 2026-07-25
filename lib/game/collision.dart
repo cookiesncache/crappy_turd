@@ -37,10 +37,7 @@ bool turdHitsGround(Turd turd) =>
 /// 4. Otherwise, a real `Path.combine(PathOperation.intersect, ...)` decides
 ///    the answer from actual shape overlap, not a rectangle approximation.
 bool turdCollidesWithPipe(Turd turd, Pipe pipe, Size size) {
-  final localTurdPath = turdBodyPath(
-    GameConstants.turdWidthFraction * size.width,
-    GameConstants.turdSize * size.height,
-  );
+  final localTurdPath = turdBodyPath(GameConstants.turdSize * size.height);
 
   // Mirrors game_painter.dart's `_paintTurd`: translate to the turd's
   // on-screen centre, THEN rotate by its tilt — same order, same values.

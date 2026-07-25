@@ -156,8 +156,7 @@ class GamePainter extends CustomPainter {
   }
 
   void _paintTurd(Canvas canvas, Size size) {
-    final widthScale = size.width * GameConstants.turdWidthFraction;
-    final heightScale = size.height * GameConstants.turdSize;
+    final turdSize = size.height * GameConstants.turdSize;
     final center = Offset(
       size.width * GameConstants.turdX,
       turd.y * size.height,
@@ -172,7 +171,7 @@ class GamePainter extends CustomPainter {
       // unscaled silhouette -- see the comment there. Adding a scale here
       // and nowhere else is intentional, not an oversight.
       ..scale(turd.scaleX, turd.scaleY);
-    paintTurd(canvas, widthScale, heightScale);
+    paintTurd(canvas, turdSize);
     canvas.restore();
   }
 

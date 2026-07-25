@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/models/pipe.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/pipe_painter.dart';
@@ -13,6 +14,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// geometry (a [Size]), not just screen-fraction constants, so every test
 /// below needs a concrete one to work against.
 const testSize = Size(400, 800);
+
+/// The pipe.x (height-fraction) value that places a pipe at the SAME world
+/// pixel x position as the turd's own fixed horizontal position
+/// ([GameConstants.turdX], a WIDTH-fraction). Since the two are expressed
+/// in different units, "pipe directly under the turd" is no longer just
+/// `pipe.x = GameConstants.turdX` (that shortcut only ever coincidentally
+/// worked back when both were width-fractions) -- it requires converting
+/// through a shared pixel space for the [size] in question.
+double turdAlignedPipeX(Size size) =>
+    GameConstants.turdX * size.width / size.height;
 
 void main() {
   group('turdHitsGround', () {
@@ -54,7 +65,8 @@ void main() {
 
   group('turdCollidesWithPipe', () {
     test('false when horizontally far from the pipe', () {
-      final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX + 1;
+      final pipe = Pipe.spawn(testSize, math.Random(1))
+        ..x = GameConstants.turdX + 1;
       final turd = Turd()..y = pipe.gapCenterY;
       expect(turdCollidesWithPipe(turd, pipe, testSize), isFalse);
     });
@@ -63,7 +75,8 @@ void main() {
       'false when flying through the centre of the gap (real shape must '
       'not false-positive on open space)',
       () {
-        final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+        final pipe = Pipe.spawn(testSize, math.Random(1))
+          ..x = turdAlignedPipeX(testSize);
         final turd = Turd()..y = pipe.gapCenterY;
         expect(turdCollidesWithPipe(turd, pipe, testSize), isFalse);
       },
@@ -72,7 +85,8 @@ void main() {
     test(
       'true when horizontally overlapping and vertically in the top bar',
       () {
-        final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+        final pipe = Pipe.spawn(testSize, math.Random(1))
+          ..x = turdAlignedPipeX(testSize);
         // ceiling is always above the lowest possible gapTop (see
         // pipe_field_test.dart's documented gapCenterY bounds), so the
         // turd's real silhouette is guaranteed to reach into the top bar
@@ -85,7 +99,8 @@ void main() {
     test(
       'true when horizontally overlapping and vertically in the bottom bar',
       () {
-        final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+        final pipe = Pipe.spawn(testSize, math.Random(1))
+          ..x = turdAlignedPipeX(testSize);
         // groundY is always below the highest possible gapBottom (see
         // pipe_field_test.dart), so the turd's real silhouette is
         // guaranteed to reach into the bottom bar for any spawned pipe.
@@ -105,21 +120,21 @@ void main() {
         // half-width 0.15*s, while the bottommost ("base") scoop is
         // centred at local y = +0.30*s with half-width 0.48*s -- roughly
         // 3x wider. At size = GameConstants.turdSize * testSize.height
-        // (= 104), that's a tip half-width of 15.6px versus an overall
-        // bounding-box half-width of 49.92px set by the base scoop, at a
+        // (= 92), that's a tip half-width of 13.8px versus an overall
+        // bounding-box half-width of 44.16px set by the base scoop, at a
         // completely different row.
-        final pipe = Pipe.spawn(math.Random(1));
+        final pipe = Pipe.spawn(testSize, math.Random(1));
         final gapTopWorld =
             (pipe.gapCenterY - GameConstants.gapHeight / 2) * testSize.height;
 
         // Anchor the turd so the pipe's top bar spans local y in
-        // [-centerDy, -40]. -40 sits below (more negative than) -38.48,
+        // [-centerDy, -40]. -40 sits below (more negative than) -34.04,
         // the top edge of the third scoop's own range, so nothing but the
         // tapering tip scoop is ever in play for this whole bar -- true
         // for ANY spawned pipe, since gapTopWorld is always >= 88px (see
         // pipe_field_test.dart's documented bounds), making centerDy
         // always >= 128px, comfortably past the tip scoop's own centre at
-        // local y = -41.6.
+        // local y = -36.8.
         final centerDy = gapTopWorld + 40;
         final turd = Turd()..y = centerDy / testSize.height;
         expect(
@@ -131,15 +146,14 @@ void main() {
         );
 
         final centerDx = GameConstants.turdX * testSize.width;
-        // 28.4px clears both the tip scoop's own 15.6px half-width AND its
-        // collar cap's overhang (pipeWidth*0.15 = 8.4px) with room to
+        // 27.8px clears both the tip scoop's own 13.8px half-width AND its
+        // collar cap's overhang (pipeWidth*0.15 = 9.6px) with room to
         // spare, while still sitting well inside the turd's overall
-        // bounding-box half-width of 49.92px.
-        const localXCutoff = 28.4;
-        pipe.x = (centerDx + localXCutoff) / testSize.width;
+        // bounding-box half-width of 44.16px.
+        const localXCutoff = 27.8;
+        pipe.x = (centerDx + localXCutoff) / testSize.height;
 
         final turdWorldPath = turdBodyPath(
-          GameConstants.turdWidthFraction * testSize.width,
           GameConstants.turdSize * testSize.height,
         ).shift(Offset(centerDx, centerDy));
         final pipeWorldPath = pipeCollisionPath(pipe, testSize);
@@ -162,7 +176,7 @@ void main() {
       'a significant tilt changes the collision outcome relative to an '
       'un-rotated check at the same position',
       () {
-        final pipe = Pipe.spawn(math.Random(1));
+        final pipe = Pipe.spawn(testSize, math.Random(1));
         final gapTopWorld =
             (pipe.gapCenterY - GameConstants.gapHeight / 2) * testSize.height;
         final centerDx = GameConstants.turdX * testSize.width;
@@ -170,9 +184,22 @@ void main() {
         // Same top-bar-only construction as above, shifted up and further
         // right so a steep nose-down tilt swings part of the silhouette
         // into the pipe that the un-rotated silhouette clears.
-        final centerDy = gapTopWorld + 40 - 60;
+        //
+        // These two offsets were re-derived empirically (a throwaway script
+        // sweeping candidate values directly against the real
+        // turdCollidesWithPipe, deleted after use) rather than hand-derived,
+        // because this tuning pass changed turdSize AND pipeWidth at the
+        // same time -- turdBodyPath is self-similar in size (so a
+        // turdSize-only change could be handled by scaling both offsets by
+        // the same ratio, as the previous revision of this test did), but
+        // the pipe's own shape is not self-similar with the turd's, so a
+        // simultaneous pipeWidth change breaks that shortcut. 15px / 46px
+        // sit in the middle of a comfortably wide band (44-49px at this
+        // vertical offset) that reproduces the same flat-misses /
+        // tilted-hits outcome, not right at its edge.
+        final centerDy = gapTopWorld - 15;
         final turdY = centerDy / testSize.height;
-        pipe.x = (centerDx + 48) / testSize.width;
+        pipe.x = (centerDx + 46) / testSize.height;
 
         final flat = Turd()
           ..y = turdY
@@ -223,11 +250,12 @@ void main() {
     test('true if any one pipe in a multi-pipe list collides', () {
       // Far away horizontally, so it can never collide no matter where the
       // turd is vertically.
-      final nonCollidingPipe = Pipe.spawn(math.Random(1))
+      final nonCollidingPipe = Pipe.spawn(testSize, math.Random(1))
         ..x = GameConstants.turdX + 1;
       // Directly under the turd, and ceiling sits above every possible gap
       // (see the top-bar test above), so this one always collides.
-      final collidingPipe = Pipe.spawn(math.Random(2))..x = GameConstants.turdX;
+      final collidingPipe = Pipe.spawn(testSize, math.Random(2))
+        ..x = turdAlignedPipeX(testSize);
       final turd = Turd()..y = GameConstants.ceiling;
       expect(
         checkCollision(turd, [nonCollidingPipe, collidingPipe], testSize),
@@ -250,12 +278,10 @@ void main() {
       // the SAME screen-fraction scenarios already used above: the
       // established reference (portrait, width/height = 0.5), a
       // narrower/taller portrait (0.333...), and a wider/shorter one
-      // (~0.857). Before the fix, the turd's rendered WIDTH was derived
-      // from screen HEIGHT rather than screen WIDTH, so it silently grew
-      // relative to the (correctly width-scaled) pipe gap on narrow/tall
-      // viewports and shrank on wide/short ones -- flipping at least one
-      // of the outcomes below relative to the reference size. After the
-      // fix, width genuinely scales with width, so every ratio must agree.
+      // (~0.857). The turd's own silhouette is a single, screen-HEIGHT-only
+      // scalar (GameConstants.turdSize) that never varies with aspect
+      // ratio, and pipe geometry (GameConstants.pipeWidth) is now defined
+      // on that SAME height axis too, so every ratio below must agree.
       const sizes = [
         Size(400, 800),
         Size(300, 900),
@@ -267,7 +293,8 @@ void main() {
         'true at every aspect ratio',
         () {
           for (final size in sizes) {
-            final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+            final pipe = Pipe.spawn(size, math.Random(1))
+              ..x = turdAlignedPipeX(size);
             final turd = Turd()..y = GameConstants.ceiling;
             expect(
               turdCollidesWithPipe(turd, pipe, size),
@@ -283,7 +310,8 @@ void main() {
         'aspect ratio',
         () {
           for (final size in sizes) {
-            final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+            final pipe = Pipe.spawn(size, math.Random(1))
+              ..x = turdAlignedPipeX(size);
             final turd = Turd()..y = pipe.gapCenterY;
             expect(
               turdCollidesWithPipe(turd, pipe, size),
@@ -299,7 +327,8 @@ void main() {
         'true at every aspect ratio',
         () {
           for (final size in sizes) {
-            final pipe = Pipe.spawn(math.Random(1))..x = GameConstants.turdX;
+            final pipe = Pipe.spawn(size, math.Random(1))
+              ..x = turdAlignedPipeX(size);
             final turd = Turd()..y = GameConstants.groundY;
             expect(
               turdCollidesWithPipe(turd, pipe, size),
@@ -309,142 +338,119 @@ void main() {
           }
         },
       );
+    },
+  );
 
-      // The three tests above all place the pipe directly at pipe.x ==
-      // GameConstants.turdX -- dead-centre overlap so generous that ANY
-      // positive turd width reaches it. That makes them blind to the actual
-      // bug: reintroducing the old single-scalar-height-derived width (so
-      // turdBodyPath's width and height scale are both
-      // GameConstants.turdSize * size.height) still passes all three at
-      // every size above. The two tests below instead position the pipe at
-      // a horizontal offset chosen to land BETWEEN the old (buggy) and new
-      // (fixed) half-widths, so only one of the two formulas actually
-      // reaches the pipe -- a real discriminating regression test.
-      //
-      // Both target the turd's widest ("base") scoop
-      // (_turdScoops(0.30, 0.96, 0.44) in turd_painter.dart) at its own
-      // ellipse centre -- local y = +0.30 * heightScale below the turd's
-      // world position -- where its horizontal half-reach is exactly
-      // 0.48 * widthScale, no curvature or rounded-corner ambiguity to
-      // account for.
+  group(
+    'turd-to-pipe size ratio is aspect-ratio independent (regression for '
+    'the reported difficulty-varies-by-screen-shape bug -- this time on '
+    'the PIPE side, since the turd itself is now a fixed single scalar). '
+    'Deliberately exercises the REAL rendering/collision geometry '
+    '(pipeCollisionPath / PipeField.update), not a hand-reimplemented copy '
+    'of the formula, so a regression in the actual production code is '
+    'guaranteed to be caught -- this project has a history of '
+    'cross-aspect-ratio tests that looked plausible but did not actually '
+    'discriminate',
+    () {
+      // Genuinely varied shapes -- not near-duplicates -- same spirit as
+      // the collision-outcome group above.
+      const sizes = [
+        Size(400, 800),
+        Size(300, 900),
+        Size(600, 700),
+      ];
+
       test(
-        'on a narrow/tall viewport, a pipe just past the CORRECT (narrower) '
-        'width clears -- the old height-derived width would have '
-        'incorrectly collided',
+        "the ratio of the turd's fixed pixel size to the pipe's REAL "
+        'painted/collision pixel width is the same constant at every '
+        'aspect ratio',
         () {
-          const size = Size(300, 900);
-          final heightScale = GameConstants.turdSize * size.height; // 117
-          final correctHalfWidth =
-              GameConstants.turdWidthFraction * size.width * 0.48; // 28.8
-          final buggyHalfWidth = heightScale * 0.48; // 56.16
-          // Comfortably between the two (11.2 clear of the correct edge,
-          // 16.16 inside the buggy one) -- well past pipe_painter.dart's
-          // corner radius (pipeWidth * 0.12 = 5.04px here) at either end.
-          const offset = 40.0;
-          expect(correctHalfWidth, lessThan(offset));
-          expect(buggyHalfWidth, greaterThan(offset));
+          final ratios = sizes.map((size) {
+            final turdPixelSize = GameConstants.turdSize * size.height;
+            final pipe = Pipe.spawn(size, math.Random(1));
+            // The pipe's actual painted/collision silhouette (top bar +
+            // bottom bar + both collar caps) -- its bounding-box width is
+            // pipeWidth + 2*capOverhang, a fixed multiple of whatever
+            // pipeWidth itself resolves to in pixels. Reading this back
+            // from the real geometry (rather than recomputing
+            // GameConstants.pipeWidth * size.height by hand) means a
+            // regression in pipe_painter.dart's actual formula is
+            // guaranteed to show up here.
+            final pipePixelWidth = pipeCollisionPath(
+              pipe,
+              size,
+            ).getBounds().width;
+            return turdPixelSize / pipePixelWidth;
+          }).toList();
 
-          final pipe = Pipe.spawn(math.Random(1));
-          final gapBottomWorld =
-              (pipe.gapCenterY + GameConstants.gapHeight / 2) * size.height;
-          final turdWorldY = gapBottomWorld - 0.30 * heightScale;
-          final turd = Turd()..y = turdWorldY / size.height;
-          expect(turd.tilt, 0, reason: 'keep this case unrotated');
-
-          final turdWorldX = GameConstants.turdX * size.width;
-          pipe.x = (turdWorldX + offset) / size.width;
-
-          expect(
-            turdCollidesWithPipe(turd, pipe, size),
-            isFalse,
-            reason:
-                'the correctly width-scaled turd (half-width 28.8) does '
-                'not reach a pipe 40px away; the old buggy formula '
-                '(half-width 56.16) would have',
-          );
+          for (final ratio in ratios) {
+            expect(
+              ratio,
+              closeTo(ratios.first, 1e-4),
+              reason:
+                  'the turd-size-to-pipe-width ratio must be a pure '
+                  'constant, independent of aspect ratio, since both are '
+                  'now multiples of size.height',
+            );
+          }
         },
       );
 
       test(
-        'on a wide/short viewport, a pipe just past the CORRECT (wider) '
-        'width collides -- the old height-derived width would have '
-        'incorrectly cleared it',
+        "the ratio of the turd's fixed pixel size to the REAL pixel "
+        'spacing between two consecutively spawned pipes (as actually '
+        'positioned by PipeField.update) is the same constant at every '
+        'aspect ratio',
         () {
-          // A more extreme wide/short ratio than the narrow/tall case above
-          // needs, purely because turdWidthFraction is smaller now (tuned
-          // down after live feedback -- see its doc comment) than when
-          // these tests were first written: the gap between the old
-          // (height-derived) and new (width-derived) half-widths shrinks
-          // as turdWidthFraction shrinks, so Size(600, 700) no longer left
-          // enough margin past the corner radius to be robust. Size(800,
-          // 500) restores a comfortable gap.
-          const size = Size(800, 500);
-          final heightScale = GameConstants.turdSize * size.height; // 65
-          final correctHalfWidth =
-              GameConstants.turdWidthFraction * size.width * 0.48; // 76.8
-          final buggyHalfWidth = heightScale * 0.48; // 31.2
-          // Comfortably between the two (22.8 clear on each side) -- well
-          // past pipe_painter.dart's corner radius
-          // (pipeWidth * 0.12 = 13.44px here).
-          const offset = 54.0;
-          expect(correctHalfWidth, greaterThan(offset));
-          expect(buggyHalfWidth, lessThan(offset));
+          final ratios = sizes.map((size) {
+            final turdPixelSize = GameConstants.turdSize * size.height;
+            // Two full spawn intervals, back to back: the first spawns one
+            // pipe with zero overshoot: the second advances it by exactly
+            // one more interval AND spawns a second fresh pipe, again with
+            // zero overshoot -- so the two pipes' x values differ by
+            // exactly one spawn-to-spawn step, with no same-frame
+            // staggering complicating the arithmetic (see
+            // pipe_field_test.dart for that staggering behaviour).
+            final field = PipeField(math.Random(1))
+              ..update(GameConstants.spawnInterval, size)
+              ..update(GameConstants.spawnInterval, size);
+            expect(
+              field.pipes.length,
+              2,
+              reason: 'sanity-check exactly two pipes spawned',
+            );
+            // Read the spacing back from the pipes' REAL rendered/collision
+            // left edges (pipeCollisionPath), not by recomputing
+            // pipe.x * size.height by hand -- so a regression in
+            // pipe_painter.dart's actual left-edge formula is guaranteed to
+            // show up here too. The caps' overhang offsets both pipes'
+            // bounds().left identically, so it cancels exactly in the
+            // subtraction.
+            final leftA = pipeCollisionPath(
+              field.pipes[0],
+              size,
+            ).getBounds().left;
+            final leftB = pipeCollisionPath(
+              field.pipes[1],
+              size,
+            ).getBounds().left;
+            final spacingPx = (leftB - leftA).abs();
+            return turdPixelSize / spacingPx;
+          }).toList();
 
-          final pipe = Pipe.spawn(math.Random(1));
-          final gapBottomWorld =
-              (pipe.gapCenterY + GameConstants.gapHeight / 2) * size.height;
-          final turdWorldY = gapBottomWorld - 0.30 * heightScale;
-          final turd = Turd()..y = turdWorldY / size.height;
-          expect(turd.tilt, 0, reason: 'keep this case unrotated');
-
-          final turdWorldX = GameConstants.turdX * size.width;
-          pipe.x = (turdWorldX + offset) / size.width;
-
-          expect(
-            turdCollidesWithPipe(turd, pipe, size),
-            isTrue,
-            reason:
-                'the correctly width-scaled turd (half-width 76.8) '
-                'reaches a pipe 54px away; the old buggy formula '
-                '(half-width 31.2) would have missed it entirely',
-          );
+          for (final ratio in ratios) {
+            expect(
+              ratio,
+              closeTo(ratios.first, 1e-4),
+              reason:
+                  'the turd-size-to-pipe-spacing ratio must be a pure '
+                  'constant, independent of aspect ratio, since both the '
+                  "turd's size and real pipe spacing are now multiples of "
+                  'size.height',
+            );
+          }
         },
       );
     },
   );
-
-  group('turdBodyPath axis independence (catches cross-axis coupling)', () {
-    test(
-      'changing ONLY the width scale changes ONLY the bounds width -- '
-      'the bounds height stays fixed',
-      () {
-        const heightScale = 100.0;
-        final narrow = turdBodyPath(50, heightScale).getBounds();
-        final wide = turdBodyPath(80, heightScale).getBounds();
-
-        expect(wide.height, narrow.height);
-        expect(wide.width, greaterThan(narrow.width));
-        // Every scoop's width is a direct multiple of the width scale, so
-        // the overall bounding box width must scale by (approximately --
-        // Skia's path-boolean-op curve flattening introduces a tiny bit of
-        // floating-point noise) the same ratio as the width scale itself.
-        expect(wide.width / narrow.width, closeTo(80 / 50, 1e-4));
-      },
-    );
-
-    test(
-      'changing ONLY the height scale changes ONLY the bounds height -- '
-      'the bounds width stays fixed',
-      () {
-        const widthScale = 100.0;
-        final short = turdBodyPath(widthScale, 50).getBounds();
-        final tall = turdBodyPath(widthScale, 90).getBounds();
-
-        expect(tall.width, short.width);
-        expect(tall.height, greaterThan(short.height));
-        // Same tiny-floating-point-noise tolerance reasoning as above.
-        expect(tall.height / short.height, closeTo(90 / 50, 1e-4));
-      },
-    );
-  });
 }

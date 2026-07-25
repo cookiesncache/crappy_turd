@@ -38,8 +38,16 @@ void main() {
       // far to the left of turdX (0.30) with no way to ever geometrically
       // collide with the turd.
       final pipeField = PipeField(math.Random(1));
-      final prePassedPipe = Pipe.spawn(math.Random(1))
-        ..update(GameConstants.pipeSpawnX / GameConstants.pipeSpeed);
+
+      // The real game canvas size GameScreen will report via MediaQuery
+      // once pumped below -- needed up front to reproduce the exact (now
+      // aspect-ratio-dependent) dynamic spawn position, since Pipe.spawn
+      // needs the actual Size to compute it. The test binding's view is
+      // already configured before the first pumpWidget call.
+      final size = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final spawnX = size.width / size.height + GameConstants.pipeSpawnMargin;
+      final prePassedPipe = Pipe.spawn(size, math.Random(1))
+        ..update(spawnX / GameConstants.pipeSpeed);
       expect(
         prePassedPipe.x,
         closeTo(0, 0.01),
