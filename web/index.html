@@ -1,33 +1,28 @@
 <!DOCTYPE html><html><head>
   <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
+    Relative base href (instead of Flutter's default "$FLUTTER_BASE_HREF"
+    placeholder, which `flutter build` fills with "/") so the same build
+    works wherever it's hosted: a domain root, a GitHub Pages project
+    subpath (/crappy_turd/), or itch.io's HTML5 player, which serves games
+    from a deep per-upload path. The game has no URL routing, so a
+    relative base is safe. `--base-href` has no effect while this is set.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+  <base href="./">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Tap to flap a cute little turd through the pipes.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="crappy_turd">
+  <meta name="apple-mobile-web-app-title" content="Crappy Turd">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>crappy_turd</title>
+  <title>Crappy Turd</title>
   <link rel="manifest" href="manifest.json">
   <style id="splash-screen-style">
     html {
