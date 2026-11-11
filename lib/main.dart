@@ -312,7 +312,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _size.width *
             decay;
         final dy =
-            math.cos(t * GameConstants.shakeFrequency * 1.3) *
+            math.sin(t * GameConstants.shakeFrequency * 1.3) *
             GameConstants.shakeMagnitude *
             _size.height *
             decay;
