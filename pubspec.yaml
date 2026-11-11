@@ -43,6 +43,11 @@ dev_dependencies:
   flutter_native_splash: ^2.4.8
   flutter_test:
     sdk: flutter
+  # Used only by tool/generate_screenshots.dart, to flatten the Play Store
+  # feature graphic to an alpha-free PNG and downscale the 512px store icon
+  # (dart:ui can only encode RGBA PNGs). Already in the lockfile as a
+  # transitive dependency of flutter_launcher_icons.
+  image: ^4.9.1
 
   # Strict lint ruleset, activated in analysis_options.yaml.
   very_good_analysis: ^10.3.0

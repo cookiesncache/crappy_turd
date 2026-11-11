@@ -27,11 +27,29 @@
 ///     pipe is placed with its gap manually aligned to the turd's expected
 ///     on-screen position at capture time.
 ///
+/// Plus the two other Play Store listing graphics:
+///   * `feature_graphic.png` -- the same real title screen, pumped at the
+///     1024x500 feature-graphic size.
+///   * `icon_512.png` -- `assets/icon/icon.png` downscaled to the 512x512
+///     size the store listing's app icon slot requires.
+///
+/// All four land in `build/screenshots/`. The three widget captures are
+/// written as alpha-free RGB PNGs, which Play requires for screenshots
+/// and feature graphics.
+///
 /// ---------------------------------------------------------------------
 /// IMPORTANT -- how to run this file: `flutter test tool/generate_screenshots.dart`
 /// ---------------------------------------------------------------------
 /// Needs `flutter_test`'s widget-testing/engine access, same reason as
 /// `tool/generate_icon.dart` -- plain `dart run` has no `dart:ui` engine.
+///
+/// Known issue: each widget test writes its file but then hangs instead of
+/// completing, which stalls the whole run for minutes per test. Generate
+/// the images one at a time instead, stopping each run (Ctrl+C) once its
+/// `Wrote ...` line prints:
+///   `flutter test tool/generate_screenshots.dart --plain-name "generate title screenshot"`
+/// and likewise for "generate gameplay screenshot", "generate feature
+/// graphic" and "generate 512px store icon" (that last one exits normally).
 library;
 
 import 'dart:io';
@@ -48,10 +66,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 /// Play Store phone screenshot resolution: a standard 16:9-ish portrait
 /// size comfortably within Play Console's accepted dimension/ratio range.
 const Size screenshotSize = Size(1080, 1920);
+
+/// Play Store feature graphic resolution -- the one exact size Play
+/// Console accepts for that slot.
+const Size featureGraphicSize = Size(1024, 500);
+
+/// Play Store listing icon resolution -- the one exact size Play Console
+/// accepts for the store listing's app icon.
+const int storeIconSize = 512;
 
 /// `flutter_test`'s widget binding has no real fonts loaded by default, so
 /// text (the title, "Tap to start", the score HUD) and the mute icon render
@@ -68,10 +95,35 @@ const Size screenshotSize = Size(1080, 1920);
 /// `tool/generate_icon.dart`/`tool/generate_audio.dart` -- this file never
 /// ships with the app, it's a one-off local build tool.
 Future<void> _loadRealFonts() async {
-  const fontsDir =
-      r'C:\Users\simsc\dev\flutter\bin\cache\artifacts\material_fonts';
-  await _loadFont('Roboto', '$fontsDir\\roboto-regular.ttf');
-  await _loadFont('MaterialIcons', '$fontsDir\\materialicons-regular.otf');
+  final fontsDir = _materialFontsDir();
+  await _loadFont('Roboto', '$fontsDir/roboto-regular.ttf');
+  await _loadFont('MaterialIcons', '$fontsDir/materialicons-regular.otf');
+}
+
+/// Finds the Flutter SDK's `bin/cache/artifacts/material_fonts/` folder
+/// without hardcoding where the SDK is installed: `FLUTTER_ROOT` when it's
+/// set, otherwise by walking up from the running `flutter_tester` binary,
+/// which lives under `<sdk>/bin/cache/artifacts/engine/<platform>/`.
+String _materialFontsDir() {
+  final flutterRoot = Platform.environment['FLUTTER_ROOT'];
+  if (flutterRoot != null) {
+    final dir = Directory('$flutterRoot/bin/cache/artifacts/material_fonts');
+    if (dir.existsSync()) {
+      return dir.path;
+    }
+  }
+  var dir = File(Platform.resolvedExecutable).parent;
+  for (var i = 0; i < 6; i++) {
+    final candidate = Directory('${dir.path}/material_fonts');
+    if (candidate.existsSync()) {
+      return candidate.path;
+    }
+    dir = dir.parent;
+  }
+  throw StateError(
+    "Couldn't find the Flutter SDK's material_fonts folder. Set FLUTTER_ROOT "
+    'to your Flutter SDK path and rerun.',
+  );
 }
 
 Future<void> _loadFont(String family, String path) async {
@@ -253,16 +305,54 @@ void main() {
       await _capture(tester, 'gameplay');
     });
   });
+
+  testWidgets('generate feature graphic', (tester) async {
+    await _withScreenshotSurface(tester, size: featureGraphicSize, () async {
+      await tester.runAsync(_loadRealFonts);
+      await tester.pumpWidget(
+        const RepaintBoundary(
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: GameScreen(),
+          ),
+        ),
+      );
+      // Same settled-bob pose as the title screenshot.
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await _capture(tester, 'feature_graphic');
+    });
+  });
+
+  test('generate 512px store icon', () {
+    final source = img.decodePng(
+      File('assets/icon/icon.png').readAsBytesSync(),
+    );
+    if (source == null) {
+      throw StateError('Failed to decode assets/icon/icon.png.');
+    }
+    final resized = img.copyResize(
+      source,
+      width: storeIconSize,
+      height: storeIconSize,
+      interpolation: img.Interpolation.cubic,
+    );
+    final bytes = img.encodePng(resized);
+    _writeOutput('icon_512', bytes);
+  });
 }
 
-/// Pumps [body] with the test view fixed to [screenshotSize] at a 1:1
-/// device pixel ratio, so the eventual RenderRepaintBoundary.toImage
-/// capture comes out at exactly that pixel resolution.
+/// Pumps [body] with the test view fixed to [size] (the phone
+/// [screenshotSize] by default) at a 1:1 device pixel ratio, so the
+/// eventual RenderRepaintBoundary.toImage capture comes out at exactly
+/// that pixel resolution.
 Future<void> _withScreenshotSurface(
   WidgetTester tester,
-  Future<void> Function() body,
-) async {
-  tester.view.physicalSize = screenshotSize;
+  Future<void> Function() body, {
+  Size size = screenshotSize,
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   // The test binding's default view simulates a nonzero top inset (as if
   // for a status bar/notch), which the real app never actually paints
@@ -282,6 +372,11 @@ Future<void> _withScreenshotSurface(
   await body();
 }
 
+/// Captures the [RepaintBoundary] and writes it as
+/// `build/screenshots/[name].png`, re-encoded as 3-channel RGB: Play
+/// rejects screenshots and feature graphics that have an alpha channel,
+/// and dart:ui's own PNG encoder always emits RGBA, even when every pixel
+/// is fully opaque.
 Future<void> _capture(WidgetTester tester, String name) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byType(RepaintBoundary).first,
@@ -289,10 +384,16 @@ Future<void> _capture(WidgetTester tester, String name) async {
   final image = await boundary.toImage();
   final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
   if (byteData == null) {
-    throw StateError('Failed to PNG-encode the $name screenshot.');
+    throw StateError('Failed to PNG-encode the $name capture.');
   }
-  final bytes = byteData.buffer.asUint8List();
+  final decoded = img.decodePng(byteData.buffer.asUint8List());
+  if (decoded == null) {
+    throw StateError('Failed to decode the $name capture for flattening.');
+  }
+  _writeOutput(name, img.encodePng(decoded.convert(numChannels: 3)));
+}
 
+void _writeOutput(String name, List<int> bytes) {
   final dir = Directory('build/screenshots');
   if (!dir.existsSync()) {
     dir.createSync(recursive: true);
