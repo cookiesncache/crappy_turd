@@ -17,6 +17,7 @@ import 'package:crappy_turd/game/trail_field.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:crappy_turd/render/game_painter.dart';
 import 'package:crappy_turd/theme/palette.dart';
+import 'package:crappy_turd/ui/privacy_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart' show HapticFeedback;
@@ -384,6 +385,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
+            // In-app privacy policy link (Google Play requires one inside
+            // the app, not just on the store listing). Title screen only,
+            // sitting on the grass, out of the way of play. A direct Stack
+            // child for the same reason as the mute button above: the
+            // TextButton's own tap recognizer wins the gesture arena, so
+            // tapping it doesn't also start the game.
+            if (_status == GameStatus.title)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: TextButton(
+                      onPressed: () => unawaited(showPrivacyPolicy(context)),
+                      child: const Text(
+                        'Privacy',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Palette.turdDark,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Palette.turdDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
