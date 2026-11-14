@@ -120,8 +120,13 @@ with a smiley face arguably does.
 
 1. Use the default track ("Closed testing - Alpha") or create one.
 2. **Countries/regions:** add every country your testers are in, or all of them.
-3. **Testers:** create an email list with at least 12 people's Google
-   account emails (Gmail or any Google account), and set a feedback email or URL.
+3. **Testers:** the track uses the public Google Group
+   `crappyturd-testers@googlegroups.com` (anyone can join; only the owner
+   can post or see members). Feedback goes to `cookiesncache@gmail.com`.
+   Testers join with two links:
+   - Join the group: https://groups.google.com/g/crappyturd-testers
+   - Then opt in: https://play.google.com/apps/testing/com.cookiesncache.crappy_turd
+     (works once the first release is approved)
 4. **Create new release:**
    - On the first release, accept **Play App Signing** (Google holds the app
      signing key, and your upload keystore stays the upload key).
@@ -135,9 +140,9 @@ with a smiley face arguably does.
      ```
 5. **Review release → Start rollout to Closed testing.** Google reviews it,
    which can take hours to a few days.
-6. Once it's approved, copy the **opt-in link** from the track's Testers tab
-   and send it to the testers. Each one opens it, taps "Become a tester",
-   then installs from Play.
+6. Once it's approved, send testers both links from step 3. Each one joins
+   the group, opens the opt-in link, taps "Become a tester", then installs
+   from Play.
 7. Keep **12 or more testers opted in for 14 days in a row**. Ask them to
    actually play now and then; Google looks at engagement.
 8. After 14 days, the Dashboard offers **Apply for production access**,
