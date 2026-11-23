@@ -1,13 +1,16 @@
 <!DOCTYPE html><html><head>
   <!--
-    Relative base href (instead of Flutter's default "$FLUTTER_BASE_HREF"
-    placeholder, which `flutter build` fills with "/") so the same build
-    works wherever it's hosted: a domain root, a GitHub Pages project
-    subpath (/crappy_turd/), or itch.io's HTML5 player, which serves games
-    from a deep per-upload path. The game has no URL routing, so a
-    relative base is safe. `--base-href` has no effect while this is set.
+    No <base> tag on purpose. Flutter's template has one whose href
+    `flutter build` fills in with "/" (or whatever `--base-href` says),
+    pinning the build to one path. Without a base tag every asset path
+    resolves relative to this page, so the same build works wherever it's
+    hosted: a domain root, a GitHub Pages project subpath (/crappy_turd/),
+    or itch.io's HTML5 player, which serves games from a deep per-upload
+    path. The game has no URL routing, so nothing needs an absolute base.
+    (A relative <base href="./"> would do the same for builds, but
+    `flutter run` rejects any base href that doesn't start with "/".)
+    `--base-href` has no effect while this tag is absent.
   -->
-  <base href="./">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
