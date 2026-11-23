@@ -357,4 +357,40 @@ abstract final class GameConstants {
   /// stars never appear before the background star field itself has
   /// started fading in.
   static const double shootingStarVisibilityThreshold = 0.5;
+
+  // --- Bunnies ---
+  //
+  // Happy bunnies hop along the grass now and then: pure decoration, no
+  // gameplay effect. Positions and distances use the same height-based
+  // units as the pipes, so a bunny rides along with the scrolling ground.
+
+  /// Shortest and longest wait, in seconds, before the next bunny shows up
+  /// (re-rolled after each one, like the shooting stars).
+  static const double bunnyIntervalMin = 4;
+  static const double bunnyIntervalMax = 11;
+
+  /// Most bunnies on screen at once.
+  static const int bunnyMaxCount = 2;
+
+  /// A bunny's height (feet to the top of its head, not counting its ears)
+  /// at scale 1, as a fraction of screen height.
+  static const double bunnySize = 0.05;
+
+  /// Smallest and largest a bunny's size multiplier can be.
+  static const double bunnyMinScale = 0.8;
+  static const double bunnyMaxScale = 1.15;
+
+  /// How long each hop spends in the air, in seconds.
+  static const double bunnyHopTime = 0.42;
+
+  /// How far one hop travels along the ground, in screen-heights.
+  static const double bunnyHopDistance = 0.05;
+
+  /// How high a hop peaks, in screen-heights.
+  static const double bunnyHopHeight = 0.03;
+
+  /// Shortest and longest pause between hops, in seconds (each bunny
+  /// gets its own).
+  static const double bunnyRestMin = 0.2;
+  static const double bunnyRestMax = 0.8;
 }

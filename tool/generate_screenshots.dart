@@ -33,7 +33,8 @@
 ///   * `icon_512.png` -- `assets/icon/icon.png` downscaled to the 512x512
 ///     size the store listing's app icon slot requires.
 ///
-/// All four land in `build/screenshots/`. The three widget captures are
+/// The three scene captures each get a couple of bunnies placed in view
+/// (see [_bunniesAt]). All four land in `build/screenshots/`. The three widget captures are
 /// written as alpha-free RGB PNGs, which Play requires for screenshots
 /// and feature graphics.
 ///
@@ -56,10 +57,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:crappy_turd/game/bunny_field.dart';
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
 import 'package:crappy_turd/game/pipe_field.dart';
 import 'package:crappy_turd/main.dart';
+import 'package:crappy_turd/models/bunny.dart';
 import 'package:crappy_turd/models/pipe.dart';
 import 'package:crappy_turd/models/turd.dart';
 import 'package:flutter/material.dart';
@@ -142,10 +145,12 @@ void main() {
       // framework's guarded-call tracking on a later pump/pumpWidget call.
       await tester.runAsync(_loadRealFonts);
       await tester.pumpWidget(
-        const RepaintBoundary(
+        RepaintBoundary(
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: GameScreen(),
+            home: GameScreen(
+              bunnyField: _bunniesAt(const [(0.09, 1, 0), (0.44, -1, 1)]),
+            ),
           ),
         ),
       );
@@ -279,7 +284,12 @@ void main() {
         RepaintBoundary(
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: GameScreen(pipeField: pipeField),
+            home: GameScreen(
+              pipeField: pipeField,
+              // Placed a little right of where they'll be caught: the
+              // ground carries them left once play starts.
+              bunnyField: _bunniesAt(const [(0.36, -1, 2), (0.54, 1, 0)]),
+            ),
           ),
         ),
       );
@@ -310,10 +320,12 @@ void main() {
     await _withScreenshotSurface(tester, size: featureGraphicSize, () async {
       await tester.runAsync(_loadRealFonts);
       await tester.pumpWidget(
-        const RepaintBoundary(
+        RepaintBoundary(
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: GameScreen(),
+            home: GameScreen(
+              bunnyField: _bunniesAt(const [(0.35, 1, 0), (1.55, -1, 2)]),
+            ),
           ),
         ),
       );
@@ -341,6 +353,19 @@ void main() {
     final bytes = img.encodePng(resized);
     _writeOutput('icon_512', bytes);
   });
+}
+
+/// A [BunnyField] with bunnies already in place, so every shot has some
+/// rather than depending on one turning up at random. Each entry is
+/// (x in screen-heights, facing, coat index). Seeded, and the field's
+/// first random spawn is seconds away, far longer than any capture here
+/// pumps, so no extra bunny wanders in.
+BunnyField _bunniesAt(List<(double, int, int)> placements) {
+  return BunnyField(math.Random(1))
+    ..bunnies.addAll([
+      for (final (x, facing, coat) in placements)
+        Bunny(x: x, facing: facing, scale: 1.1, coat: coat, restTime: 0.4),
+    ]);
 }
 
 /// Pumps [body] with the test view fixed to [size] (the phone

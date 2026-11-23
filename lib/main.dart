@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:crappy_turd/game/bunny_field.dart';
 import 'package:crappy_turd/game/cloud_field.dart';
 import 'package:crappy_turd/game/collision.dart';
 import 'package:crappy_turd/game/constants.dart';
@@ -49,7 +50,7 @@ class CrappyTurdApp extends StatelessWidget {
 /// the best score across all runs, persisted across app restarts via
 /// [HighScoreStore].
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.pipeField});
+  const GameScreen({super.key, this.pipeField, this.bunnyField});
 
   /// An optional pre-seeded [PipeField] override, used by tests that need
   /// deterministic pipe-gap placement (e.g. to reliably drive the turd
@@ -58,6 +59,11 @@ class GameScreen extends StatefulWidget {
   /// [_GameScreenState.initState], which creates a fresh unseeded field
   /// instead whenever this is null.
   final PipeField? pipeField;
+
+  /// An optional [BunnyField] override, used by the store-screenshot tool
+  /// to place bunnies where the camera will catch them rather than waiting
+  /// for one to turn up at random. Left null for real gameplay.
+  final BunnyField? bunnyField;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -80,6 +86,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   /// the next one, has no reason to care which run is currently underway
   /// (see `lib/game/shooting_star_field.dart`).
   final ShootingStarField _shootingStarField = ShootingStarField();
+
+  /// Bunnies hopping along the grass now and then. Session-long like the
+  /// clouds: never reset on restart (see `lib/game/bunny_field.dart`).
+  late final BunnyField _bunnyField;
   final SoundManager _soundManager = SoundManager();
   final HighScoreStore _highScoreStore = HighScoreStore();
   late final Ticker _ticker;
@@ -134,6 +144,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _pipeField = widget.pipeField ?? PipeField();
+    _bunnyField = widget.bunnyField ?? BunnyField();
     _ticker = createTicker(_onTick);
     unawaited(_ticker.start());
     _shakeController = AnimationController(
@@ -192,6 +203,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       // culled regardless of GameStatus, hence living in this
       // unconditional block rather than inside the `playing` case below.
       _shootingStarField.update(dt, _dayNightT);
+      // Bunnies hop about whatever the status, but only ride the
+      // scrolling ground left while it's actually scrolling (playing).
+      _bunnyField.update(
+        dt,
+        _size,
+        groundSpeed: _status == GameStatus.playing
+            ? GameConstants.pipeSpeed
+            : 0,
+      );
       switch (_status) {
         case GameStatus.title:
           final t = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
@@ -342,6 +362,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   particles: _particleField.particles,
                   stars: _starField.stars,
                   shootingStars: _shootingStarField.shootingStars,
+                  bunnies: _bunnyField.bunnies,
                   dayNightT: _dayNightT,
                   playTime: _playTime,
                 ),

@@ -59,5 +59,21 @@ void main() {
         );
       },
     );
+
+    test(
+      'every randomised cloud shape stays within 1.15 radii of its centre '
+      'horizontally, so isOffscreen and the wrap point stay valid',
+      () {
+        for (var seed = 0; seed < 50; seed++) {
+          final field = CloudField(math.Random(seed));
+          for (final cloud in field.clouds) {
+            expect(cloud.puffs, isNotEmpty);
+            for (final puff in cloud.puffs) {
+              expect(puff.dx.abs() + puff.radius, lessThanOrEqualTo(1.15));
+            }
+          }
+        }
+      },
+    );
   });
 }

@@ -25,13 +25,50 @@ abstract final class Palette {
     Color(0xFFB197FC),
   ];
 
-  // Ground.
+  // Ground: a striped grass band (with blades along its top edge and a
+  // scalloped lip) over warm, pebbly soil.
   static const Color ground = Color(0xFF93DC82);
   static const Color groundShadow = Color(0xFF6FBF63);
+  static const Color groundStripe = Color(0xFF86D175);
+  static const Color groundHighlight = Color(0xFFB4EBA4);
+  static const Color soilTop = Color(0xFFEBCB97);
+  static const Color soilBottom = Color(0xFFD9AE73);
+  static const Color pebbleDark = Color(0xFFC99A5E);
+  static const Color pebbleLight = Color(0xFFF5E2BF);
 
-  // Pipes (friendly, non-scary green, harmonising with the ground).
+  // Little flowers dotted through the grass.
+  static const List<Color> flowerPetals = [
+    Color(0xFFFF9EC4), // pink
+    Color(0xFFFFE066), // butter yellow
+    Color(0xFFFFFFFF), // white
+    Color(0xFFC9A7FF), // lavender
+  ];
+  static const Color flowerCenter = Color(0xFFFFB238);
+  static const Color flowerStem = Color(0xFF4E9F45);
+
+  // Happy bunnies hopping along the grass: three coat colours, each with
+  // a darker shade for its underside and outline.
+  static const List<Color> bunnyCoats = [
+    Color(0xFFFFFBF5), // snow white
+    Color(0xFFEBD3B8), // fawn
+    Color(0xFFDCDCE4), // dove grey
+  ];
+  static const List<Color> bunnyCoatShades = [
+    Color(0xFFE8DED3),
+    Color(0xFFD4B794),
+    Color(0xFFC2C2CE),
+  ];
+  static const Color bunnyOutline = Color(0xFF9C8B7C);
+  static const Color bunnyInnerEar = Color(0xFFFFC4D0);
+  static const Color bunnyNose = Color(0xFFFF8FA8);
+  static const Color bunnyFace = Color(0xFF5A4636);
+
+  // Pipes (friendly, non-scary green, harmonising with the ground), shaded
+  // across their width so they read as rounded.
   static const Color pipeGreen = Color(0xFF6FCF6B);
+  static const Color pipeGreenLight = Color(0xFFA8EC9F);
   static const Color pipeGreenDark = Color(0xFF4A9E48);
+  static const Color pipeOutline = Color(0xFF3B7F3A);
 
   // Turd body (top -> bottom, used for the soft-serve gradient).
   static const Color turdLight = Color(0xFFB07A50);
@@ -55,9 +92,15 @@ abstract final class Palette {
   // Accent used to celebrate a new/tied best score on the game-over panel.
   static const Color gold = Color(0xFFE8A93B);
 
-  // Background parallax clouds -- very light, semi-transparent
-  // blue-white so they read as soft and distant against the sky gradient.
-  static const Color cloud = Color(0x80F5FBFF);
+  // Background parallax clouds: sunlit white tops fading to a soft
+  // blue-grey underside by day, and a dimmer moonlit slate by night (see
+  // lib/render/cloud_painter.dart).
+  static const Color cloudTop = Color(0xF2FFFFFF);
+  static const Color cloudShade = Color(0xE6C9DAEB);
+  static const Color cloudHighlight = Color(0xCCFFFFFF);
+  static const Color cloudNightTop = Color(0xB38C9CCB);
+  static const Color cloudNightShade = Color(0x99566596);
+  static const Color cloudNightHighlight = Color(0x40B8C4EA);
 
   // Bright twinkle tones for the flap "sparkle" particle burst -- warm
   // gold and pale white-gold, alternated per-particle for a glinting look.

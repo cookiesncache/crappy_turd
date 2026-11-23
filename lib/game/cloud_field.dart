@@ -40,7 +40,46 @@ class CloudField {
           GameConstants.cloudMinScale +
           _random.nextDouble() *
               (GameConstants.cloudMaxScale - GameConstants.cloudMinScale),
+      puffs: _randomPuffs(),
     );
+  }
+
+  /// A fresh cumulus-style shape: a row of smaller puffs whose bottoms sit
+  /// on one shared baseline (the flat underside real fair-weather clouds
+  /// have), topped by two or three bigger puffs billowing up from the
+  /// middle. Kept within about 1.15 cloud-radii of the centre
+  /// horizontally, which `Cloud.isOffscreen` relies on.
+  List<CloudPuff> _randomPuffs() {
+    const baseline = 0.35;
+    double jitter(double amount) => (_random.nextDouble() * 2 - 1) * amount;
+    double between(double lo, double hi) =>
+        lo + _random.nextDouble() * (hi - lo);
+
+    final puffs = <CloudPuff>[];
+    final baseCount = 4 + _random.nextInt(2);
+    for (var i = 0; i < baseCount; i++) {
+      final radius = between(0.26, 0.36);
+      puffs.add(
+        CloudPuff(
+          -0.72 + 1.44 * i / (baseCount - 1) + jitter(0.05),
+          baseline - radius + jitter(0.02),
+          radius,
+        ),
+      );
+    }
+    final crownCount = 2 + _random.nextInt(2);
+    final crownSpan = crownCount == 2 ? 0.3 : 0.4;
+    for (var i = 0; i < crownCount; i++) {
+      final radius = between(0.38, 0.55);
+      puffs.add(
+        CloudPuff(
+          -crownSpan + 2 * crownSpan * i / (crownCount - 1) + jitter(0.08),
+          baseline - radius - between(0.12, 0.32),
+          radius,
+        ),
+      );
+    }
+    return puffs;
   }
 
   /// Advance every cloud by [dt] seconds; any that have drifted fully

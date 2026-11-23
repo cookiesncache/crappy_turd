@@ -101,16 +101,174 @@ Path pipeCollisionPath(Pipe pipe, Size size) {
 
 void _paintPipe(Canvas canvas, Size size, Pipe pipe) {
   final g = _PipeGeometry(pipe, size);
+  final outline = Paint()
+    ..color = Palette.pipeOutline
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = math.max(1, g.pipeWidth * 0.025);
 
-  final body = Paint()..color = Palette.pipeGreen;
-  canvas
-    ..drawRRect(g.topBar, body)
-    ..drawRRect(g.bottomBar, body);
+  // Bodies first, then the wider "collar" caps over their gap-facing
+  // ends, for a cute silhouette. Purely decorative: none of the shading
+  // or detail below changes the silhouette [pipeCollisionPath] uses.
+  _paintBody(canvas, g, g.topBar, outline, capEnd: g.topCapTop, up: true);
+  _paintBody(
+    canvas,
+    g,
+    g.bottomBar,
+    outline,
+    capEnd: g.bottomCapBottom,
+    up: false,
+  );
+  _paintCap(canvas, g, g.topCap, outline);
+  _paintCap(canvas, g, g.bottomCap, outline);
+}
 
-  // Wider "collar" caps at the gap-facing end of each pipe, for a cute
-  // silhouette.
-  final cap = Paint()..color = Palette.pipeGreenDark;
+/// Shades a pipe body as a rounded tube lit from the upper left: a
+/// horizontal light-to-dark gradient, a glossy highlight stripe, joint
+/// rings every so often, and a soft shadow where it meets its cap.
+///
+/// [capEnd] is the cap's far edge (the end facing away from the gap), and
+/// [up] says which way the body runs from there: up for the top pipe, down
+/// for the bottom one.
+void _paintBody(
+  Canvas canvas,
+  _PipeGeometry g,
+  RRect bar,
+  Paint outline, {
+  required double capEnd,
+  required bool up,
+}) {
+  if (bar.height <= 0) return;
+  final rect = bar.outerRect;
+  final w = g.pipeWidth;
   canvas
-    ..drawRRect(g.topCap, cap)
-    ..drawRRect(g.bottomCap, cap);
+    ..drawRRect(
+      bar,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [
+            Palette.pipeGreenDark,
+            Palette.pipeGreen,
+            Palette.pipeGreenLight,
+            Palette.pipeGreen,
+            Palette.pipeGreenDark,
+          ],
+          stops: [0, 0.14, 0.3, 0.55, 1],
+        ).createShader(rect),
+    )
+    ..save()
+    ..clipRRect(bar);
+
+  // Joint rings, counted out from the cap so they stay evenly spaced from
+  // the gap whatever the pipe's height: a dark groove with a lit edge.
+  final spacing = w * 1.4;
+  final groove = Paint()..color = Palette.pipeOutline.withValues(alpha: 0.3);
+  final lit = Paint()..color = Colors.white.withValues(alpha: 0.18);
+  for (var k = 1; ; k++) {
+    final y = up ? capEnd - k * spacing : capEnd + k * spacing;
+    if (y < rect.top - w || y > rect.bottom) break;
+    canvas
+      ..drawRect(Rect.fromLTWH(rect.left, y, w, w * 0.035), groove)
+      ..drawRect(Rect.fromLTWH(rect.left, y + w * 0.035, w, w * 0.025), lit);
+  }
+
+  // Glossy highlight stripe running the length of the tube.
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      Rect.fromLTWH(rect.left + w * 0.2, rect.top, w * 0.07, rect.height),
+      Radius.circular(w * 0.035),
+    ),
+    Paint()..color = Colors.white.withValues(alpha: 0.32),
+  );
+
+  // Soft contact shadow on the body right next to the cap.
+  final shadowDepth = w * 0.25;
+  final shadowRect = up
+      ? Rect.fromLTRB(rect.left, capEnd - shadowDepth, rect.right, capEnd)
+      : Rect.fromLTRB(rect.left, capEnd, rect.right, capEnd + shadowDepth);
+  canvas
+    ..drawRect(
+      shadowRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: up ? Alignment.bottomCenter : Alignment.topCenter,
+          end: up ? Alignment.topCenter : Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.2),
+            Colors.black.withValues(alpha: 0),
+          ],
+        ).createShader(shadowRect),
+    )
+    ..restore()
+    ..drawRRect(bar, outline);
+}
+
+/// Shades a collar cap like the body (a touch darker), with a lit top rim,
+/// a shaded bottom rim, and a row of rivets.
+void _paintCap(Canvas canvas, _PipeGeometry g, RRect cap, Paint outline) {
+  if (cap.height <= 0) return;
+  final rect = cap.outerRect;
+  final w = g.pipeWidth;
+  canvas
+    ..drawRRect(
+      cap,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [
+            Palette.pipeOutline,
+            Palette.pipeGreenDark,
+            Palette.pipeGreen,
+            Palette.pipeGreenDark,
+            Palette.pipeOutline,
+          ],
+          stops: [0, 0.12, 0.28, 0.6, 1],
+        ).createShader(rect),
+    )
+    ..save()
+    ..clipRRect(cap)
+    ..drawRect(
+      Rect.fromLTWH(rect.left, rect.top, rect.width, rect.height * 0.16),
+      Paint()..color = Colors.white.withValues(alpha: 0.25),
+    )
+    ..drawRect(
+      Rect.fromLTWH(
+        rect.left,
+        rect.bottom - rect.height * 0.14,
+        rect.width,
+        rect.height * 0.14,
+      ),
+      Paint()..color = Colors.black.withValues(alpha: 0.15),
+    )
+    ..drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          rect.left + rect.width * 0.2,
+          rect.top,
+          w * 0.07,
+          rect.height,
+        ),
+        Radius.circular(w * 0.035),
+      ),
+      Paint()..color = Colors.white.withValues(alpha: 0.28),
+    );
+
+  // Rivets, skipped on a cap squeezed too short (see the clamping in
+  // _PipeGeometry) to fit them.
+  final rivetR = w * 0.045;
+  if (rect.height > rivetR * 4) {
+    final rivet = Paint()..color = Palette.pipeOutline.withValues(alpha: 0.7);
+    final shine = Paint()..color = Colors.white.withValues(alpha: 0.5);
+    for (final f in const [0.18, 0.5, 0.82]) {
+      final c = Offset(rect.left + rect.width * f, rect.center.dy);
+      canvas
+        ..drawCircle(c, rivetR, rivet)
+        ..drawCircle(
+          c.translate(-rivetR * 0.35, -rivetR * 0.35),
+          rivetR * 0.4,
+          shine,
+        );
+    }
+  }
+  canvas
+    ..restore()
+    ..drawRRect(cap, outline);
 }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:crappy_turd/game/constants.dart';
+import 'package:crappy_turd/models/bunny.dart';
 import 'package:crappy_turd/models/cloud.dart';
 import 'package:crappy_turd/models/particle.dart';
 import 'package:crappy_turd/models/pipe.dart';
@@ -8,7 +9,9 @@ import 'package:crappy_turd/models/shooting_star.dart';
 import 'package:crappy_turd/models/star.dart';
 import 'package:crappy_turd/models/trail_sample.dart';
 import 'package:crappy_turd/models/turd.dart';
+import 'package:crappy_turd/render/bunny_painter.dart';
 import 'package:crappy_turd/render/cloud_painter.dart';
+import 'package:crappy_turd/render/ground_painter.dart';
 import 'package:crappy_turd/render/particle_painter.dart';
 import 'package:crappy_turd/render/pipe_painter.dart';
 import 'package:crappy_turd/render/shooting_star_painter.dart';
@@ -19,7 +22,8 @@ import 'package:flutter/material.dart';
 
 /// Paints the whole game world each frame: a bright (or, on a long enough
 /// run, twilight) sky with twinkling stars and the odd shooting star,
-/// drifting clouds and a rainbow, a grassy ground, scrolling pipes, a
+/// drifting clouds and a rainbow, a flowery ground with the odd hopping
+/// bunny, scrolling pipes, a
 /// fading motion trail, the turd at its current height/tilt/squash, and any
 /// live decorative particles on top of everything.
 class GamePainter extends CustomPainter {
@@ -33,6 +37,7 @@ class GamePainter extends CustomPainter {
     required this.shootingStars,
     required this.dayNightT,
     required this.playTime,
+    this.bunnies = const [],
   });
 
   final Turd turd;
@@ -42,6 +47,7 @@ class GamePainter extends CustomPainter {
   final List<Particle> particles;
   final List<Star> stars;
   final List<ShootingStar> shootingStars;
+  final List<Bunny> bunnies;
 
   /// How far a run has shifted from day (0.0) toward night (1.0), looping
   /// back and forth for as long as a run lasts. See
@@ -79,10 +85,21 @@ class GamePainter extends CustomPainter {
     paintShootingStars(canvas, size, shootingStars);
     // Furthest-back solid layer: clouds drift behind the rainbow and
     // everything else.
-    paintClouds(canvas, size, clouds);
+    paintClouds(canvas, size, clouds, dayNightT);
     _paintRainbow(canvas, size);
-    _paintGround(canvas, size);
+    // The ground scrolls exactly as far as the pipes have travelled this
+    // run (pipe x and pipeSpeed are both in screen-heights), so it moves
+    // in lockstep with them, holds still on the title screen, and freezes
+    // with them at game over.
+    paintGround(
+      canvas,
+      size,
+      playTime * GameConstants.pipeSpeed * size.height,
+    );
     paintPipes(canvas, size, pipes);
+    // Bunnies stand on the grass band, which sits in front of the pipes'
+    // bases, so they're drawn over the pipes.
+    paintBunnies(canvas, size, bunnies);
     paintTurdTrail(canvas, size, trailSamples);
     _paintTurd(canvas, size);
     // Frontmost layer: particle bursts read as being in front of
@@ -140,19 +157,6 @@ class GamePainter extends CustomPainter {
         paint,
       );
     }
-  }
-
-  void _paintGround(Canvas canvas, Size size) {
-    final groundTop = size.height * GameConstants.groundY;
-    canvas
-      ..drawRect(
-        Rect.fromLTRB(0, groundTop, size.width, size.height),
-        Paint()..color = Palette.ground,
-      )
-      ..drawRect(
-        Rect.fromLTWH(0, groundTop, size.width, size.height * 0.018),
-        Paint()..color = Palette.groundShadow,
-      );
   }
 
   void _paintTurd(Canvas canvas, Size size) {
